@@ -8,6 +8,7 @@ import {
   type ReconciliationResult,
   type SourceAuthorizationFields,
 } from "@auth-inspection/domain";
+import { extractAuthorizationFields } from "./authorization-field-extractor.js";
 
 export interface InspectionJob {
   taskId: string;
@@ -105,14 +106,16 @@ export async function processInspection(
     mime: job.mime,
     bytes: job.bytes,
   });
+  const extractedFields = extractAuthorizationFields(parsed.fields);
+  const inspectionFields = [...parsed.fields, ...extractedFields];
 
-  await dependencies.repository.saveFindings(job.taskId, parsed.fields);
+  await dependencies.repository.saveFindings(job.taskId, inspectionFields);
   if (
     job.sourceFields &&
     job.attachmentUrl &&
     dependencies.repository.saveReconciliation
   ) {
-    const evidence = parsed.fields
+    const evidence = inspectionFields
       .filter(
         (item) =>
           item.page !== undefined &&
@@ -137,13 +140,13 @@ export async function processInspection(
       recordId: job.taskId,
       attachmentUrl: job.attachmentUrl,
       source: job.sourceFields,
-      attachment: rebuildAttachmentFields(parsed.fields),
+      attachment: rebuildAttachmentFields(inspectionFields),
       evidence,
       ...(parseStatus ? { parseStatus } : {}),
     });
     await dependencies.repository.saveReconciliation(job.taskId, result);
   }
-  const requiresReview = parsed.fields.some(
+  const requiresReview = inspectionFields.some(
     (item) =>
       item.confidence < 0.85 ||
       item.value === null ||
