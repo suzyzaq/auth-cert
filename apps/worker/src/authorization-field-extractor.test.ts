@@ -76,4 +76,33 @@ describe("extractAuthorizationFields", () => {
 
     expect(fields).toEqual([]);
   });
+
+  it("flags a missing grantee when OCR drops the name between authorization cues", () => {
+    const fields = extractAuthorizationFields([
+      {
+        name: "documentText",
+        value: [
+          "授权书",
+          "兹认定",
+          "为得力品牌",
+          "广东",
+          "文具品类",
+          "经销商",
+        ].join("\n"),
+        confidence: 0.9,
+        method: "OCR",
+        page: 1,
+        evidenceText: "授权书正文",
+      },
+    ]);
+
+    expect(fields).toContainEqual(
+      expect.objectContaining({
+        name: "grantees",
+        value: null,
+        page: 1,
+        evidenceText: "兹认定 … 为得力品牌",
+      }),
+    );
+  });
 });

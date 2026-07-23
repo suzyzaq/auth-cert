@@ -43,7 +43,7 @@ const rules: Rule[] = [
 function fieldFromLine(
   source: ExtractedField,
   name: string,
-  value: string,
+  value: string | null,
   evidenceText: string,
 ): ExtractedField {
   return {
@@ -97,6 +97,36 @@ export function extractAuthorizationFields(
         extracted.push(fieldFromLine(source, "expiryDate", dates[1], periodLine));
         seen.add("expiryDate");
       }
+    }
+  }
+
+  if (!seen.has("grantees")) {
+    const pageTokens = sourceFields
+      .filter((item) => item.name === "documentText" && item.value)
+      .flatMap((source) =>
+        source.value!
+          .split(/\r?\n/)
+          .map((text) => ({ source, text: text.trim() }))
+          .filter((item) => item.text),
+      );
+    const cueIndex = pageTokens.findIndex((item) => item.text === "兹认定");
+    const brandIndex = pageTokens.findIndex(
+      (item, index) => index > cueIndex && /^为.+品牌/.test(item.text),
+    );
+    if (cueIndex >= 0 && brandIndex > cueIndex) {
+      const company = pageTokens
+        .slice(cueIndex + 1, brandIndex)
+        .find((item) => /(公司|集团|商行|经营部|中心|厂)$/.test(item.text));
+      const cue = pageTokens[cueIndex]!;
+      extracted.push(
+        fieldFromLine(
+          company?.source ?? cue.source,
+          "grantees",
+          company?.text ?? null,
+          company?.text ?? `${cue.text} … ${pageTokens[brandIndex]!.text}`,
+        ),
+      );
+      seen.add("grantees");
     }
   }
 
