@@ -6,6 +6,7 @@
   "exports": {
     "./parsing": "./src/parsing/contracts.ts",
     "./composite-parser": "./src/parsing/composite-parser.ts",
+    "./mineru-parser": "./src/parsing/mineru-parser.ts",
     "./dingtalk-oauth": "./src/auth/dingtalk-oauth.ts",
     "./source-json-client": "./src/source/source-json-client.ts",
     "./source-database": "./src/source/source-database.ts",
@@ -18,5 +19,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "build": "tsc"
+  },
+  "dependencies": {
+    "fflate": "0.8.2"
   }
 }

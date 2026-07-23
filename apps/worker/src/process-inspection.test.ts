@@ -102,5 +102,10 @@ describe("processInspection", () => {
         ]),
       }),
     );
+    expect(parser.parse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceUrl: "https://example.test/auth.pdf",
+      }),
+    );
   });
 });

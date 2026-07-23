@@ -20,6 +20,7 @@ export interface ParsedDocument {
 
 export interface ParseAttachmentInput {
   attachmentId: string;
+  sourceUrl?: string;
   mime: string;
   bytes: Uint8Array;
 }

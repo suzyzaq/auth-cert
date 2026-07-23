@@ -13,7 +13,13 @@ Secret 需要由管理员在发布环境配置：
 - `OSS_ACCESS_KEY_SECRET`
 - `OSS_BUCKET`
 - `MODEL_API_KEY`
+- `MINERU_API_TOKEN`
 - `SESSION_SECRET`
+
+非敏感运行参数：
+
+- `PARSER_ADAPTER=mineru`
+- `MINERU_ALLOWED_SOURCE_HOSTS=supply-auto-project.oss-cn-hangzhou.aliyuncs.com`
 
 上线前保持 `WRITEBACK_ENABLED=false`。完成验收并由管理员确认目标数据库、
 权限范围与变更摘要后，才可在发布平台单独开启。

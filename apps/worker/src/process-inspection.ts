@@ -101,6 +101,7 @@ export async function processInspection(
 ): Promise<void> {
   const parsed = await dependencies.parser.parse({
     attachmentId: job.attachmentId,
+    ...(job.attachmentUrl ? { sourceUrl: job.attachmentUrl } : {}),
     mime: job.mime,
     bytes: job.bytes,
   });
