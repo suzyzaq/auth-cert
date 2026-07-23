@@ -1,0 +1,21 @@
+{
+  "name": "authorization-inspection-workbench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.14.0",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @auth-inspection/web --filter @auth-inspection/api --filter @auth-inspection/worker dev",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.base.json",
+    "lint": "eslint .",
+    "build": "pnpm -r build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.32.0",
+    "eslint": "^9.32.0",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.39.0",
+    "vitest": "^3.2.4"
+  }
+}
