@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-inspection-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: auth-inspection-api
+  template:
+    metadata:
+      labels:
+        app: auth-inspection-api
+    spec:
+      containers:
+        - name: api
+          image: ${ACR_REGISTRY}/auth-inspection-api:${IMAGE_TAG}
+          ports:
+            - containerPort: 8788
+          envFrom:
+            - secretRef:
+                name: auth-inspection-runtime
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8788
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8788
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }
+            limits: { cpu: "1", memory: 1Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-inspection-api
+spec:
+  selector:
+    app: auth-inspection-api
+  ports:
+    - port: 80
+      targetPort: 8788
+

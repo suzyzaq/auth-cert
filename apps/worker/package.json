@@ -1,0 +1,21 @@
+{
+  "name": "@auth-inspection/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@auth-inspection/domain": "workspace:*",
+    "@auth-inspection/integrations": "workspace:*",
+    "bullmq": "^5.58.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "tsx": "^4.20.3"
+  },
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  }
+}
