@@ -1,0 +1,275 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "OFS Brand / Category Normalize Skill",
+    "description": "欧菲斯品牌 & 品类标准化技能。\n品牌：附件品牌与数据库品牌分别标准化、映射到欧菲斯标准品牌、判定是否同一标准品牌（本地品牌主库 + 别名库 + SCS在线品牌库回退，仅启用品牌且只作候选）。\n品类：将(商品名, 甲方类目)映射到欧菲斯统一三级品类(类目/中类/小类)，含兜底规则。\n两个接口完全隔离：独立内存索引、独立 reload、独立异常边界，一个接口故障不影响另一个。确定性规则引擎，无LLM，毫秒级响应。",
+    "version": "1.2.0"
+  },
+  "servers": [
+    {
+      "url": "http://REPLACE_WITH_SERVICE_URL:8000",
+      "description": "brand-normalize-service 部署地址 —— 导入前把 REPLACE_WITH_SERVICE_URL 换成真实 IP:PORT（端口按实际部署改，默认 8000）"
+    }
+  ],
+  "paths": {
+    "/api/brand/normalize": {
+      "post": {
+        "operationId": "normalizeBrand",
+        "summary": "品牌标准化与同品牌判定",
+        "description": "输入附件识别品牌与数据库品牌，分别标准化到欧菲斯标准品牌并判定是否同一品牌。仅当两侧命中同一标准品牌ID才返回 same_brand=true。本地未命中时自动查询SCS在线品牌库（仅启用状态，只作候选，需人工复核）。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["attachment_values", "source_values"],
+                "properties": {
+                  "task_type": {
+                    "type": "string",
+                    "description": "固定值 brand_standardization",
+                    "default": "brand_standardization"
+                  },
+                  "authorization_code": {
+                    "type": "string",
+                    "description": "授权书编号（透传回响应，用于对账）"
+                  },
+                  "authorization_name": {
+                    "type": "string",
+                    "description": "授权书名称"
+                  },
+                  "attachment_values": {
+                    "description": "附件识别出的品牌。支持: 数组/单字符串/JSON字符串数组/逗号顿号分隔",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "source_values": {
+                    "description": "数据库登记品牌。格式兼容同 attachment_values",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "candidate_values": {
+                    "description": "候选品牌（可选，透传）",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "requirements": {
+                    "description": "处理要求说明（可选）",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "标准化结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "description": "处理是否成功" },
+                    "authorization_code": { "type": "string" },
+                    "same_brand": { "type": "boolean", "description": "是否同一标准品牌（仅同一标准品牌ID才为true）" },
+                    "matched_standard_brand": { "type": "string", "description": "命中的欧菲斯标准品牌名" },
+                    "matched_standard_brand_id": { "type": "string", "description": "标准品牌ID，如 BRAND_000621" },
+                    "attachment_standard_brands": { "type": "array", "items": { "type": "string" } },
+                    "source_standard_brands": { "type": "array", "items": { "type": "string" } },
+                    "attachment_standard_brand_ids": { "type": "array", "items": { "type": "string" } },
+                    "source_standard_brand_ids": { "type": "array", "items": { "type": "string" } },
+                    "attachment_unmatched_values": { "type": "array", "items": { "type": "string" }, "description": "附件侧未识别品牌值" },
+                    "source_unmatched_values": { "type": "array", "items": { "type": "string" } },
+                    "attachment_extra_brands": { "type": "array", "items": { "type": "string" }, "description": "附件多出的品牌" },
+                    "source_extra_brands": { "type": "array", "items": { "type": "string" } },
+                    "match_type": { "type": "string", "description": "exact/normalized/alias/en_cn/fuzzy_candidate/scs_candidate/ambiguous/unmatched" },
+                    "confidence": { "type": "number", "description": "置信度 0-1" },
+                    "match_basis": { "type": "string", "description": "匹配依据（人可读）" },
+                    "needs_manual_review": { "type": "boolean", "description": "是否需人工复核" },
+                    "error_code": { "type": "string" },
+                    "message": { "type": "string" },
+                    "attachment_details": { "type": "array", "items": { "type": "object" }, "description": "附件侧逐值明细（含 scs_checked/scs_candidates）" },
+                    "source_details": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/brand/reload": {
+      "post": {
+        "operationId": "reloadBrandLibrary",
+        "summary": "品牌库热更新",
+        "description": "matcher.db 更新后调用，重建内存索引，无需重启服务。",
+        "responses": {
+          "200": {
+            "description": "重载结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "reloaded": { "type": "boolean" },
+                    "brand_count": { "type": "integer" },
+                    "data_version": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/category/normalize": {
+      "post": {
+        "operationId": "normalizeCategory",
+        "summary": "品类标准化（与品牌接口隔离）",
+        "description": "输入商品名称与甲方类目，映射到欧菲斯统一三级品类(类目/中类/小类)。优先 exact/hierarchy/fuzzy 命中 rules 表品类映射，未命中再走 fallback_categories.yaml 兜底。与品牌接口完全独立：独立索引、独立 reload、独立异常边界。确定性规则引擎，无LLM。",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["product_name", "client_category"],
+                "properties": {
+                  "task_type": {
+                    "type": "string",
+                    "description": "固定值 category_standardization",
+                    "default": "category_standardization"
+                  },
+                  "authorization_code": {
+                    "type": "string",
+                    "description": "授权书编号（透传回响应，用于对账）"
+                  },
+                  "authorization_name": {
+                    "type": "string",
+                    "description": "授权书名称"
+                  },
+                  "product_name": {
+                    "description": "商品名称。支持: 字符串/数组/JSON字符串数组/逗号顿号分隔",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "client_category": {
+                    "description": "甲方类目（客户系统里的类目名）。格式兼容同 product_name",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  },
+                  "requirements": {
+                    "description": "处理要求说明（可选）",
+                    "type": "array",
+                    "items": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "品类标准化结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean", "description": "处理是否成功" },
+                    "authorization_code": { "type": "string" },
+                    "authorization_name": { "type": "string" },
+                    "kind1": { "type": "string", "description": "欧菲斯一级类目" },
+                    "kind2": { "type": "string", "description": "欧菲斯二级类目(中类)" },
+                    "kind3": { "type": "string", "description": "欧菲斯三级类目(小类)，主数据目标" },
+                    "category_matched": { "type": "boolean", "description": "是否命中欧菲斯小类" },
+                    "category_source": { "type": "string", "description": "命中来源: product_name/client_category/fallback/legacy_fallback" },
+                    "category_match_kind": { "type": "string", "description": "keyword/synonym/hierarchy_l3/contain/fuzzy/fallback/legacy_score" },
+                    "confidence": { "type": "number", "description": "置信度 0-1" },
+                    "matched_term": { "type": "string", "description": "命中的关键词/规则" },
+                    "status": { "type": "string", "description": "matched / unmatched" },
+                    "suggestion": { "type": "string", "description": "未匹配时的建议（人可读）" },
+                    "needs_manual_review": { "type": "boolean", "description": "是否需人工复核" },
+                    "error_code": { "type": "string" },
+                    "message": { "type": "string" },
+                    "details": { "type": "array", "items": { "type": "object" }, "description": "逐条(商品名,类目)配对明细，批量时一一对应" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/category/reload": {
+      "post": {
+        "operationId": "reloadCategoryLibrary",
+        "summary": "品类库热更新",
+        "description": "matcher.db 的 rules 表更新后调用，重建品类内存索引，无需重启服务。",
+        "responses": {
+          "200": {
+            "description": "重载结果",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": { "type": "boolean" },
+                    "reloaded": { "type": "boolean" },
+                    "rule_count": { "type": "integer", "description": "命中的品类规则数" },
+                    "fallback_count": { "type": "integer", "description": "兜底规则数" },
+                    "data_version": { "type": "string" },
+                    "message": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "brandServiceHealth",
+        "summary": "健康检查（免鉴权）",
+        "responses": {
+          "200": {
+            "description": "服务状态",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": { "type": "string" },
+                    "brand_count": { "type": "integer" },
+                    "alias_count": { "type": "integer" },
+                    "data_version": { "type": "string" },
+                    "scs_enabled": { "type": "boolean" },
+                    "category_enabled": { "type": "boolean", "description": "品类库是否已加载" },
+                    "category_rule_count": { "type": "integer", "description": "品类规则数" },
+                    "category_fallback_count": { "type": "integer", "description": "兜底规则数" },
+                    "category_data_version": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "description": "BRAND_API_TOKEN，Dify 自定义工具鉴权选 API Key -> Header: Authorization, 值: Bearer <token>"
+      }
+    }
+  },
+  "security": [{ "bearerAuth": [] }]
+}

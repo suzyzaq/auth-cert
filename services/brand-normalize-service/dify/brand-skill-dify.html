@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品牌标准化 Skill · Dify 接入配置手册</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#161c24; --panel2:#1c2430; --border:#2a3340;
+    --text:#d6dde6; --muted:#8a97a6; --accent:#4f9cf9; --ok:#34d399;
+    --warn:#fbbf24; --bad:#f87171; --chip:#22303f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:14px;line-height:1.6}
+  header{padding:22px 26px;border-bottom:1px solid var(--border);background:var(--panel)}
+  h1{margin:0 0 6px;font-size:20px}
+  .sub{color:var(--muted);font-size:13px}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 26px 60px}
+  .search{width:100%;padding:10px 14px;margin:16px 0;background:var(--panel2);
+    border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px}
+  .search:focus{outline:none;border-color:var(--accent)}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+    margin:14px 0;overflow:hidden}
+  .card h2{cursor:pointer;margin:0;padding:14px 18px;font-size:15px;
+    display:flex;justify-content:space-between;align-items:center;background:var(--panel2)}
+  .card h2 .arrow{color:var(--muted);transition:transform .2s}
+  .card.collapsed .arrow{transform:rotate(-90deg)}
+  .card .body{padding:8px 18px 18px;display:block}
+  .card.collapsed .body{display:none}
+  table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted);font-weight:600;background:var(--panel2)}
+  code{background:var(--chip);padding:2px 6px;border-radius:4px;font-family:"SF Mono",Consolas,monospace;font-size:12px;color:#9fd0ff}
+  pre{background:#0b0f14;border:1px solid var(--border);border-radius:8px;padding:12px 14px;
+    overflow:auto;font-size:12px;line-height:1.5;position:relative}
+  .copy{position:absolute;top:8px;right:8px;background:var(--chip);border:1px solid var(--border);
+    color:var(--muted);border-radius:6px;padding:3px 9px;cursor:pointer;font-size:11px}
+  .copy:hover{color:var(--accent);border-color:var(--accent)}
+  .tag{display:inline-block;padding:1px 8px;border-radius:20px;font-size:11px;margin-right:5px}
+  .t-ok{background:rgba(52,211,153,.15);color:var(--ok)}
+  .t-warn{background:rgba(251,191,36,.15);color:var(--warn)}
+  .t-bad{background:rgba(248,113,113,.15);color:var(--bad)}
+  .t-info{background:rgba(79,156,249,.15);color:var(--accent)}
+  .kv{display:flex;gap:10px;padding:6px 0;border-bottom:1px dashed var(--border)}
+  .kv .k{width:200px;color:var(--muted);flex-shrink:0}
+  .note{background:rgba(79,156,249,.08);border-left:3px solid var(--accent);
+    padding:10px 14px;margin:10px 0;border-radius:0 8px 8px 0;font-size:13px}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:10px 0}
+  .node{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px}
+  .edge{color:var(--muted)}
+  .pill-ok{border-color:var(--ok);color:var(--ok)}
+  .pill-bad{border-color:var(--bad);color:var(--bad)}
+  .pill-warn{border-color:var(--warn);color:var(--warn)}
+  .small{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<header>
+  <h1>品牌标准化 Skill · Dify 接入配置手册</h1>
+  <div class="sub">附件品牌 vs 数据库品牌 标准化比对 · 确定性规则引擎 · 本地库 + SCS 回退(仅启用) · 无 LLM</div>
+</header>
+<div class="wrap">
+  <input class="search" id="q" placeholder="搜索字段 / 配置项 / 分支关键词，如 scs、same_brand、Bearer …">
+
+  <!-- 概览 -->
+  <div class="card">
+    <h2 onclick="toggle(this)">① 服务与鉴权 <span class="arrow">▾</span></h2>
+    <div class="body">
+      <div class="kv"><div class="k">服务地址</div><div><code>http://YOUR_HOST:8000</code> （部署后替换，建议内网/同VPC）</div></div>
+      <div class="kv"><div class="k">业务端点</div><div><code>POST /api/brand/normalize</code> · <code>POST /api/brand/reload</code> · <code>GET /health</code></div></div>
+      <div class="kv"><div class="k">鉴权</div><div>Bearer Token（环境变量 <code>BRAND_API_TOKEN</code>，Dify 侧放「环境变量」勿硬编码）</div></div>
+      <div class="kv"><div class="k">Header 写法</div><div><code>Authorization: Bearer &lt;BRAND_API_TOKEN&gt;</code></div></div>
+      <div class="kv"><div class="k">/health</div><div>免鉴权，但仅返回 <code>status/brand_count/alias_count/data_version/scs_enabled</code>，不泄露路径</div></div>
+      <div class="note">Dify 自定义工具：导入 <code>brand-normalize-tool.openapi.json</code>，鉴权选 <b>API Key → Header 名 Authorization → 值 Bearer &lt;token&gt;</b>。</div>
+    </div>
+  </div>
+
+  <!-- 请求 -->
+  <div class="card">
+    <h2 onclick="toggle(this)">② 请求体字段映射 <span class="arrow">▾</span></h2>
+    <div class="body">
+      <table>
+        <thead><tr><th>字段</th><th>类型</th><th>说明</th><th>Dify 变量示例</th></tr></thead>
+        <tbody>
+          <tr><td><code>task_type</code></td><td>string</td><td>固定 <code>brand_standardization</code></td><td>常量</td></tr>
+          <tr><td><code>authorization_code</code></td><td>string</td><td>授权书编号（透传对账）</td><td><code>{{#start.code#}}</code></td></tr>
+          <tr><td><code>attachment_values</code></td><td>array&lt;str&gt;</td><td>附件识别品牌</td><td><code>{{#att.brands#}}</code></td></tr>
+          <tr><td><code>source_values</code></td><td>array&lt;str&gt;</td><td>数据库登记品牌</td><td><code>{{#db.brands#}}</code></td></tr>
+          <tr><td><code>candidate_values</code></td><td>array&lt;str&gt;</td><td>候选品牌（可选）</td><td>[]</td></tr>
+          <tr><td><code>requirements</code></td><td>array&lt;str&gt;</td><td>处理要求（可选）</td><td>["附件品牌与数据库品牌分别标准化"]</td></tr>
+        </tbody>
+      </table>
+      <div class="small">输入兼容：数组 / 单字符串 / JSON字符串数组 / 逗号·顿号分隔，上游节点输出哪种都能吃。</div>
+      <pre id="req"><button class="copy" onclick="cp('req')">复制</button>{
+  "task_type": "brand_standardization",
+  "authorization_code": "{{#start.code#}}",
+  "attachment_values": {{#att.brands#}},
+  "source_values": {{#db.brands#}},
+  "requirements": ["附件品牌与数据库品牌分别标准化"]
+}</pre>
+    </div>
+  </div>
+
+  <!-- 响应 -->
+  <div class="card">
+    <h2 onclick="toggle(this)">③ 响应关键字段（消费约定） <span class="arrow">▾</span></h2>
+    <div class="body">
+      <table>
+        <thead><tr><th>字段</th><th>类型</th><th>含义 / 判定规则</th></tr></thead>
+        <tbody>
+          <tr><td><code>success</code></td><td>bool</td><td>处理成功</td></tr>
+          <tr><td><code>same_brand</code></td><td>bool</td><td><b>仅当两侧命中同一标准品牌ID才为 true</b></td></tr>
+          <tr><td><code>matched_standard_brand_id</code></td><td>string</td><td>标准品牌ID，如 <code>BRAND_000621</code></td></tr>
+          <tr><td><code>confidence</code></td><td>number 0-1</td><td>置信度（exact=1.0 / alias=0.95 / scs_candidate=0.5）</td></tr>
+          <tr><td><code>match_type</code></td><td>string</td><td><span class="tag t-ok">exact</span><span class="tag t-info">normalized</span><span class="tag t-info">alias</span><span class="tag t-info">en_cn</span><span class="tag t-warn">fuzzy_candidate</span><span class="tag t-warn">scs_candidate</span><span class="tag t-bad">conflict</span><span class="tag t-warn">unmatched</span></td></tr>
+          <tr><td><code>needs_manual_review</code></td><td>bool</td><td>需人工复核（冲突/未识别/有候选）</td></tr>
+          <tr><td><code>attachment_unmatched_values</code></td><td>array</td><td>附件侧未识别值（含 SCS 候选）</td></tr>
+          <tr><td><code>attachment_extra_brands</code></td><td>array</td><td>附件多出品牌（与数据库不一致）</td></tr>
+          <tr><td><code>scs_candidates</code></td><td>array</td><td><code>{source,scs_firm_code,scs_firm_name,scs_status}</code> 仅候选</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 工作流分支 -->
+  <div class="card">
+    <h2 onclick="toggle(this)">④ 工作流条件分支（IF/ELSE） <span class="arrow">▾</span></h2>
+    <div class="body">
+      <div class="flow">
+        <span class="node">HTTP 请求节点</span><span class="edge">→</span>
+        <span class="node">代码节点(解析 body)</span><span class="edge">→</span>
+        <span class="node">IF/ELSE 分支</span>
+      </div>
+      <table>
+        <thead><tr><th>判定条件</th><th>分支动作</th><th>标签</th></tr></thead>
+        <tbody>
+          <tr><td><code>same_brand==true</code> 且 <code>needs_manual_review==false</code></td><td>品牌一致，审核链路自动通过</td><td><span class="tag t-ok">自动通过</span></td></tr>
+          <tr><td><code>match_type==conflict</code></td><td>附件与数据库命中不同标准品牌，判不一致</td><td><span class="tag t-bad">冲突</span></td></tr>
+          <tr><td><code>needs_manual_review==true</code></td><td>转人工复核，写入钉钉AI表格队列(带 match_basis+scs_candidates)</td><td><span class="tag t-warn">人工复核</span></td></tr>
+          <tr><td><code>scs_hit==true</code>（任一侧有 scs_candidates）</td><td>标记「SCS候选」，人工确认后沉淀本地主库</td><td><span class="tag t-info">SCS回退</span></td></tr>
+        </tbody>
+      </table>
+      <pre id="code"><button class="copy" onclick="cp('code')">复制</button>def main(body: str) -> dict:
+    d = json.loads(body)
+    return {
+        "same_brand": d.get("same_brand", False),
+        "needs_manual_review": d.get("needs_manual_review", True),
+        "matched_standard_brand_id": d.get("matched_standard_brand_id", ""),
+        "match_type": d.get("match_type", "unmatched"),
+        "confidence": d.get("confidence", 0),
+        "match_basis": d.get("match_basis", ""),
+        "scs_hit": any(det.get("scs_candidates")
+            for det in d.get("attachment_details", []) + d.get("source_details", [])),
+    }</pre>
+    </div>
+  </div>
+
+  <!-- 业务红线 -->
+  <div class="card">
+    <h2 onclick="toggle(this)">⑤ 业务红线（绝不可违反） <span class="arrow">▾</span></h2>
+    <div class="body">
+      <div class="kv"><div class="k">附件品牌独立处理</div><div>附件与数据库品牌各自标准化，<b>禁止</b>用一方改写另一方</div></div>
+      <div class="kv"><div class="k">禁止跨品牌套用</div><div>不得把附件「佳能」归到数据库「惠普」</div></div>
+      <div class="kv"><div class="k">型号/品类≠品牌</div><div>型号、规格、单位、颜色不进入品牌判定</div></div>
+      <div class="kv"><div class="k">SCS 仅候选</div><div>SCS 命中只作候选，<b>绝不</b>自动确认 same_brand</div></div>
+      <div class="kv"><div class="k">仅启用品牌</div><div>SCS 查询强制 status=1，停用品牌不可用</div></div>
+    </div>
+  </div>
+
+  <div class="note">下一步：人工复核确认 SCS 候选后，沉淀进本地 matcher.db（品牌主数据回流），SCS 依赖逐步收敛；复核结果经钉钉AI表格 → 批量导入 → <code>POST /api/brand/reload</code> 热生效。</div>
+</div>
+
+<script>
+function toggle(h){ h.parentElement.classList.toggle('collapsed'); }
+function cp(id){
+  const t=document.getElementById(id).innerText.replace(/^复制/,'');
+  navigator.clipboard.writeText(t).then(()=>{
+    const b=document.querySelector('#'+id+' .copy'); const o=b.textContent;
+    b.textContent='已复制'; setTimeout(()=>b.textContent=o,1200);
+  });
+}
+document.getElementById('q').addEventListener('input',function(){
+  const v=this.value.trim().toLowerCase();
+  document.querySelectorAll('.card').forEach(c=>{
+    const hit=c.innerText.toLowerCase().includes(v);
+    c.style.display = v && !hit ? 'none':'block';
+  });
+});
+</script>
+</body>
+</html>

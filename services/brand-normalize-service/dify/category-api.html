@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品类标准化 API · 接口与字段说明</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2027; --panel2:#222b34; --line:#2c3742;
+    --txt:#e6edf3; --muted:#8b97a4; --accent:#4ea1ff; --ok:#36c18d;
+    --warn:#f0a35e; --bad:#ff6b6b; --chip:#2a333d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+  .concl{background:linear-gradient(90deg,#16251f,#1a2027);border-color:#2b4a3a}
+  .verdict{font-size:20px;font-weight:700;color:var(--ok)}
+  .concl b{color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;background:var(--panel2);position:sticky;top:0}
+  td code,code{background:var(--chip);padding:1px 6px;border-radius:4px;font-size:12px;color:#cfe3ff}
+  tr.rowhide{display:none}
+  .st{font-weight:700;white-space:nowrap}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  .req{color:var(--bad);font-weight:700}
+  .opt{color:var(--muted)}
+  input.search{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:9px 12px;font-size:14px;margin:8px 0}
+  .btn{background:var(--accent);color:#06121f;border:none;border-radius:6px;padding:5px 10px;
+    font-size:12px;cursor:pointer;font-weight:600}
+  .btn:hover{filter:brightness(1.08)}
+  .copy{float:right}
+  pre{background:#0b0f13;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;
+    font-size:12.5px;color:#cfe3ff;margin:8px 0 0}
+  details{border:1px solid var(--line);border-radius:8px;padding:0 14px;margin:10px 0;background:var(--panel)}
+  summary{cursor:pointer;padding:11px 0;font-weight:600;color:var(--accent)}
+  .next{color:var(--accent)}
+  .tag{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;color:var(--muted);margin:2px 4px 2px 0}
+  .iso{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px}
+  .iso>div{flex:1;min-width:240px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:8px;padding:12px 14px}
+  .iso h4{margin:0 0 6px;color:var(--accent);font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>品类标准化 API · 接口与字段说明</h1>
+  <div class="sub"><code>POST /api/category/normalize</code> —— 与品牌接口隔离部署的欧菲斯三级品类映射服务</div>
+
+  <div class="card concl">
+    <span class="verdict">✓ 已建成</span> —— 品类接口<b>已封装并实测通过</b>，
+    复用 brand-matcher 的品类匹配逻辑，数据来自 matcher.db 的 <code>rules</code> 表 + <code>fallback_categories.yaml</code>。
+    与品牌接口<b>完全隔离</b>：独立索引 / 独立 reload / 独立异常边界。<code>pytest</code> 品类用例 <b>15 项通过</b>。
+  </div>
+
+  <div class="card">
+    <b>隔离设计（满足「避免一个接口失败导致两类结果同时不可用」）</b>
+    <div class="iso">
+      <div>
+        <h4>品牌接口</h4>
+        <code>/api/brand/normalize</code><br>
+        内存索引 <code>BrandRepository</code><br>
+        数据：brands / brand_alias 表<br>
+        失败不影响品类
+      </div>
+      <div>
+        <h4>品类接口</h4>
+        <code>/api/category/normalize</code><br>
+        内存索引 <code>CategoryRepository</code><br>
+        数据：rules 表 + fallback yaml<br>
+        失败不影响品牌
+      </div>
+    </div>
+    <p style="margin:10px 0 0;color:var(--muted)">
+      lifespan 中两个索引<strong>独立加载、各自 try/except</strong>：一个加载失败仅记录异常，不阻断另一个。
+      Dify 侧再拆成<strong>两个独立 HTTP 节点</strong>，实现请求级故障隔离。
+    </p>
+  </div>
+
+  <div class="card">
+    <b>请求字段</b>（搜索过滤）
+    <input class="search" id="sr" placeholder="搜索字段名 / 类型 / 说明…" oninput="f('sr','tr')">
+    <table id="tr">
+      <thead><tr><th>字段</th><th>类型</th><th>必填</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>task_type</code></td><td>string</td><td class="opt">否</td><td>固定值 <code>category_standardization</code>，其它值返回 INVALID_TASK_TYPE</td></tr>
+        <tr><td><code>authorization_code</code></td><td>string</td><td class="opt">否</td><td>授权书编号，透传回响应用于对账</td></tr>
+        <tr><td><code>authorization_name</code></td><td>string</td><td class="opt">否</td><td>授权书名称</td></tr>
+        <tr><td><code>product_name</code></td><td>string / array</td><td class="req">是*</td><td>商品名称。兼容数组/单串/JSON串/逗号顿号分隔；可为空串</td></tr>
+        <tr><td><code>client_category</code></td><td>string / array</td><td class="req">是*</td><td>甲方类目（客户系统类目名）。格式兼容同 product_name</td></tr>
+        <tr><td><code>requirements</code></td><td>array</td><td class="opt">否</td><td>处理要求说明（透传）</td></tr>
+      </tbody>
+    </table>
+    <p style="color:var(--muted);font-size:12px">* 至少一个字段非空才有意义；两者皆空返回 <code>unmatched</code> + <code>needs_manual_review=true</code>。批量时按首个非空元素一一配对，完整结果在 <code>details</code>。</p>
+  </div>
+
+  <div class="card">
+    <b>响应字段</b>（搜索过滤）
+    <input class="search" id="sr2" placeholder="搜索字段名 / 类型 / 说明…" oninput="f('sr2','tp')">
+    <table id="tp">
+      <thead><tr><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>success</code></td><td>boolean</td><td>处理是否成功</td></tr>
+        <tr><td><code>authorization_code</code></td><td>string</td><td>透传的授权书编号</td></tr>
+        <tr><td><code>kind1</code></td><td>string</td><td>欧菲斯一级类目</td></tr>
+        <tr><td><code>kind2</code></td><td>string</td><td>欧菲斯二级类目（中类）</td></tr>
+        <tr><td><code>kind3</code></td><td>string</td><td><b>欧菲斯三级类目（小类）</b>，主数据落点</td></tr>
+        <tr><td><code>category_matched</code></td><td>boolean</td><td>是否命中欧菲斯小类（status=matched 且 kind3 非空）</td></tr>
+        <tr><td><code>category_source</code></td><td>string</td><td>命中来源：<code>product_name</code>/<code>client_category</code>/<code>fallback</code>/<code>legacy_fallback</code></td></tr>
+        <tr><td><code>category_match_kind</code></td><td>string</td><td><code>keyword</code>/<code>synonym</code>/<code>hierarchy_l3</code>/<code>contain</code>/<code>fuzzy</code>/<code>fallback</code>/<code>legacy_score</code></td></tr>
+        <tr><td><code>confidence</code></td><td>number</td><td>置信度 0–1（兜底/fuzzy 命中为 1.0 / 阈值分）</td></tr>
+        <tr><td><code>matched_term</code></td><td>string</td><td>命中的关键词 / 兜底规则 id</td></tr>
+        <tr><td><code>status</code></td><td>string</td><td><code>matched</code> / <code>unmatched</code></td></tr>
+        <tr><td><code>suggestion</code></td><td>string</td><td>未匹配时的建议（人可读）</td></tr>
+        <tr><td><code>needs_manual_review</code></td><td>boolean</td><td>是否需人工复核（status≠matched 或 kind3 空时为 true）</td></tr>
+        <tr><td><code>error_code</code></td><td>string</td><td>空 / <code>INVALID_TASK_TYPE</code> / <code>HTTP_xxx</code></td></tr>
+        <tr><td><code>message</code></td><td>string</td><td>处理说明</td></tr>
+        <tr><td><code>details</code></td><td>array</td><td>逐条 (商品名,类目) 配对明细，批量时一一对应</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <b>示例</b>
+    <button class="btn copy" onclick="copy('ex1')">复制</button>
+    <pre id="ex1">curl -X POST http://HOST:8000/api/category/normalize \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer &lt;BRAND_API_TOKEN&gt;" \
+  -d '{"task_type":"category_standardization","client_category":"茶杯"}'
+# -> {"success":true,"kind3":"陶瓷杯","category_source":"fallback",
+#     "category_matched":true,"confidence":1.0,"status":"matched"}</pre>
+  </div>
+
+  <div class="card">
+    <b>Dify 节点配置（独立 HTTP 节点）</b>
+    <button class="btn copy" onclick="copy('ex2')">复制</button>
+    <pre id="ex2">方法: POST
+URL:  http://HOST:8000/api/category/normalize
+Header: Content-Type: application/json
+Header: Authorization: Bearer {{#env.BRAND_API_TOKEN#}}
+超时:  连接 5s / 读取 10s
+重试:  1 次
+
+Body:
+{
+  "task_type": "category_standardization",
+  "authorization_code": "{{#start.authorization_code#}}",
+  "product_name": "{{#attachment_extract.product_name#}}",
+  "client_category": "{{#db_query.client_category#}}"
+}
+
+条件分支:
+  category_matched==true AND needs_manual_review==false -> 自动通过品类项
+  category_source=="fallback"                            -> 命中兜底(如茶杯→陶瓷杯),建议沉淀
+  needs_manual_review==true                             -> 转人工复核(钉钉AI表格队列)</pre>
+  </div>
+
+  <div class="card">
+    <b class="next">下一步</b>
+    <span class="tag">品类主数据沉淀</span>
+    <span class="tag">品类兜底规则回流</span>
+    <span class="tag">Dify 双节点编排</span>
+    <span class="tag">品类质量看板</span>
+    <p style="margin:8px 0 0;color:var(--muted)">
+      1) 高频兜底命中（如茶杯→陶瓷杯）应沉淀为 <code>rules</code> 表正式品类规则，逐步减少对兜底 yaml 的依赖；<br>
+      2) 未匹配样本回写钉钉 AI 表格复核队列，人工补关键词/规则后 reload 生效；<br>
+      3) 品牌 + 品类两个 HTTP 节点在 Dify 审核工作流中并行调用，任一失败不影响另一类结果；<br>
+      4) 沉淀品类命中率 / 兜底占比 / 未匹配 Top-N 为质量看板，驱动规则库持续优化。
+    </p>
+  </div>
+</div>
+<script>
+function f(sid, tid){
+  const q = document.getElementById(sid).value.trim().toLowerCase();
+  document.querySelectorAll('#'+tid+' tbody tr').forEach(tr=>{
+    const t = tr.textContent.toLowerCase();
+    tr.classList.toggle('rowhide', q && !t.includes(q));
+  });
+}
+function copy(id){
+  const t = document.getElementById(id).innerText;
+  navigator.clipboard.writeText(t).then(()=>{
+    const b = event.target; const o = b.textContent; b.textContent='已复制';
+    setTimeout(()=>b.textContent=o, 1200);
+  });
+}
+</script>
+</body>
+</html>

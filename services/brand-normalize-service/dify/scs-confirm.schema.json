@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SCS 候选回流确认清单",
+  "description": "人工确认后的 SCS 品牌候选，回流写入 matcher.db。字段与 scripts/scs_backfill.py 输入严格对齐。可作为 Dify 代码节点构造结果的校验/模板。",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["firm_name"],
+    "additionalProperties": false,
+    "properties": {
+      "firm_code": {
+        "type": ["integer", "string"],
+        "description": "SCS 厂商编码（仅追溯，不进 matcher.db）"
+      },
+      "firm_name": {
+        "type": "string",
+        "description": "必填。要识别/回流的品牌名；写入 brand_name 或 brand_alias.alias_name"
+      },
+      "standard_brand": {
+        "type": "string",
+        "description": "可选。填且库中存在=映射为已有标准品牌的别名；填但库中无=新建该标准品牌；不填=以 firm_name 作为新标准品牌"
+      }
+    }
+  },
+  "examples": [
+    [
+      {"firm_code": 182805, "firm_name": "洁佳人", "standard_brand": "洁佳人"},
+      {"firm_code": 7563, "firm_name": "惠普企业版", "standard_brand": "惠普/HP"}
+    ]
+  ]
+}

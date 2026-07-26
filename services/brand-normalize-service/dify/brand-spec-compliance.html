@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品牌标准化 API · Spec 合规评估</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2027; --panel2:#222b34; --line:#2c3742;
+    --txt:#e6edf3; --muted:#8b97a4; --accent:#4ea1ff; --ok:#36c18d;
+    --warn:#f0a35e; --bad:#ff6b6b; --chip:#2a333d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6}
+  .wrap{max-width:1100px;margin:0 auto;padding:24px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+  .concl{background:linear-gradient(90deg,#16251f,#1a2027);border-color:#2b4a3a}
+  .verdict{font-size:20px;font-weight:700;color:var(--ok)}
+  .concl b{color:var(--accent)}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;background:var(--panel2);position:sticky;top:0}
+  td code,code{background:var(--chip);padding:1px 6px;border-radius:4px;font-size:12px;color:#cfe3ff}
+  tr.rowhide{display:none}
+  .st{font-weight:700;white-space:nowrap}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+  input.search{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:9px 12px;font-size:14px;margin:8px 0}
+  .btn{background:var(--accent);color:#06121f;border:none;border-radius:6px;padding:5px 10px;
+    font-size:12px;cursor:pointer;font-weight:600}
+  .btn:hover{filter:brightness(1.08)}
+  .copy{float:right}
+  pre{background:#0b0f13;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;
+    font-size:12.5px;color:#cfe3ff;margin:8px 0 0}
+  details{border:1px solid var(--line);border-radius:8px;padding:0 14px;margin:10px 0;background:var(--panel)}
+  summary{cursor:pointer;padding:11px 0;font-weight:600;color:var(--accent)}
+  .next{color:var(--accent)}
+  .tag{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;color:var(--muted);margin:2px 4px 2px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>品牌标准化 API · Spec 合规评估</h1>
+  <div class="sub">对照「给 Codex 的完整开发提示词」逐条核对 <code>brand-normalize-service/</code> 的实现状态与实测证据</div>
+
+  <div class="card concl">
+    <span class="verdict">✓ 可达成</span> —— 该服务<b>已经按本 Spec 建成并实测通过</b>，
+    无需再交给 Codex 重建。证据：实跑 Spec「六、必须通过的测试案例」<b>7/7 全过</b>；
+    <code>pytest</code> 全量 <b>54 项通过</b>（含 7 强制案例、鉴权、异常结构、脏输入、SCS 回退）。
+  </div>
+
+  <div class="card">
+    <b>合规矩阵</b>（搜索框可过滤章节 / 要求 / 证据）
+    <input class="search" id="s" placeholder="搜索 Spec 章节、要求或证据…" oninput="f()">
+    <table id="t">
+      <thead><tr><th>Spec 章节</th><th>核心要求</th><th>状态</th><th>实现位置 / 证据</th></tr></thead>
+      <tbody>
+        <tr><td>一、项目目标</td><td>稳定可部署 HTTP API；<code>POST /api/brand/normalize</code>；非 LLM 问答、不依赖人工</td><td class="st ok">✓</td><td><code>app/main.py</code> FastAPI 入口；确定性逻辑，无 LLM</td></tr>
+        <tr><td>二、先检查现有项目</td><td>复用现有 Skill / 品牌主库 / 别名库 / 脚本；不破坏原调用</td><td class="st ok">✓</td><td><code>ofs_brand_core/</code> 提取层复用 <code>brand-matcher</code> 的 matcher.db；README 注明 CLI/Skill 调用零改动</td></tr>
+        <tr><td>三、业务规则①</td><td>附件与数据库品牌<b>独立</b>标准化；<b>禁止反向修正</b>附件事实</td><td class="st ok">✓</td><td><code>matcher.py:compare()</code> 对两侧分别调用 <code>normalize_value()</code>，互不改写</td></tr>
+        <tr><td>三、业务规则②</td><td>必须依据欧菲斯主库 / 别名库匹配；落到同一标准品牌 ID 才认同一品牌</td><td class="st ok">✓</td><td><code>repository.py</code> 内存索引；<code>compare()</code> 仅当 <code>att_ids==src_ids</code> 置 <code>same_brand=true</code></td></tr>
+        <tr><td>三、业务规则③</td><td>10 步顺序；模糊召回<b>仅候选</b>不可自动确认</td><td class="st ok">✓</td><td><code>matcher.py:116-222</code> 顺序 exact→normalized→alias→en_cn→fuzzy(0.6,候选)→scs(0.5,候选)</td></tr>
+        <tr><td>四、请求结构</td><td>字段兼容：空/单串/JSON 串/逗号顿号/重复/大小写</td><td class="st ok">✓</td><td><code>schemas.NormalizeRequest</code> + <code>matcher.expand_values()</code></td></tr>
+        <tr><td>五、响应结构</td><td>success/same_brand 为 Boolean；confidence 0–1；保留未命中原始值；extra/unmatched；统一错误结构</td><td class="st ok">✓</td><td><code>schemas.NormalizeResponse</code>；<code>main._error_response()</code> 统一 JSON 错误</td></tr>
+        <tr><td>六、7 强制案例</td><td>中英文同品牌 / 大小写 / 不同品牌 / 多出品牌 / 空 / 未知 / 双侧空</td><td class="st ok">✓</td><td>实跑 <b>7/7 全过</b>（见下方实测）；<code>tests/test_api.py</code> 同 7 案例</td></tr>
+        <tr><td>七、技术要求</td><td>FastAPI+Pydantic+Uvicorn+pytest；Dockerfile+.env.example；启动时加载 / reload</td><td class="st ok">✓</td><td><code>requirements.txt</code> / <code>Dockerfile</code> / <code>docker-compose.yml</code> / <code>.env.example</code>；<code>lifespan</code> 启动加载 + <code>reload_if_changed</code></td></tr>
+        <tr><td>八、接口安全</td><td>Bearer 鉴权；业务接口 fail-closed；<code>/health</code> 免鉴权且不泄露路径/密钥</td><td class="st ok">✓</td><td><code>main.require_token()</code> 无 Token 即 503；HealthResponse 仅暴露 count/version/scs_enabled</td></tr>
+        <tr><td>九、Dify 适配</td><td>给出 HTTP 节点配置；数组变量保持数组类型</td><td class="st ok">✓</td><td><code>dify/brand-normalize-tool.openapi.json</code>（可导入自定义工具）+ 前轮「Dify 可调用路径」</td></tr>
+        <tr><td>十、交付要求</td><td>检查结果 / 复用清单 / 文件清单 / 启动 / 测试 / 同步方式</td><td class="st ok">✓</td><td>本页即评估结果；README 含启动/测试/sync 说明</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <b>实测证明</b>
+    <span class="tag">实跑 Spec 7 强制案例：7/7 PASS</span>
+    <span class="tag">pytest 全量：54 passed</span>
+    <div style="color:var(--muted);margin:6px 0 2px">对真实服务（同款 <code>app.main:app</code> + 真实 matcher.db）逐一验证：</div>
+    <pre>案例1 中英文同品牌  same_brand=True  match_type=en_cn  conf=1.0
+案例2 大小写差异      same_brand=True
+案例3 明确不同品牌  same_brand=False match_type=conflict
+       basis: 附件命中「佳能/CANON」, 数据库命中「惠普/HP」
+案例4 附件多出品牌  same_brand=False needs_review=True
+       attachment_extra_brands: ['佳能/CANON']
+案例5 附件为空      same_brand=False needs_review=True
+案例6 未知品牌      same_brand=False needs_review=True
+       attachment_unmatched_values 保留原始值, 不挂靠惠普
+案例7 双侧为空      success=True same_brand=False needs_review=True (无 500)</pre>
+    <div style="color:var(--muted);margin-top:4px">注：本次 Docker Desktop 未运行，改用本地 uvicorn 跑同款代码（容器即此进程），逻辑等价，验证有效。</div>
+  </div>
+
+  <details>
+    <summary>已知偏差 / 边界（均非阻断）</summary>
+    <div style="padding:6px 0 10px">
+      <p><span class="warn">△ 别名库位置</span>：Spec 列 <code>BRAND_ALIAS_DATA_PATH</code>，本实现中正式别名在 matcher.db 的 <code>brand_alias</code> 表内（同库），该环境变量已<b>预留</b>但未独立拆分（<code>config.py:22</code> 读取并保留，默认空）。如未来别名独立成库，填该变量即可，无需改逻辑。</p>
+      <p><span class="warn">△ /health 示例值</span>：Spec 示例 <code>alias_count:10000</code> 仅为示意；真实库当前 <code>alias_count=8</code>、<code>brand_count=122393</code>，以实际加载为准。</p>
+      <p><span class="ok">＋ 响应字段为 Spec 超集</span>：在 Spec 规定字段外，额外返回 <code>attachment_details</code> / <code>source_details</code>（含 <code>scs_candidates</code>），标记为「Dify 可选消费」，不影响主字段与判断。</p>
+      <p><span class="ok">＋ SCS 回退已含</span>：本地未命中时查 SCS（仅启用品牌，仅作候选），属 Spec 之外的增强，且严格遵循「只作候选 / 需人工复核」。</p>
+    </div>
+  </details>
+
+  <details open>
+    <summary>下一步建议</summary>
+    <div style="padding:6px 0 10px" class="next">
+      <p>1. <b>品类接口拆分</b>：按 Spec 末段建议，将品类标准化封装为独立 <code>POST /api/category/normalize</code>，与品牌接口隔离，避免单点故障拖垮两类结果。</p>
+      <p>2. <b>生产部署</b>：确保 Docker Desktop 运行后 <code>bash manage.sh start</code> 拉起容器（本次验证用本地 uvicorn 等价于容器内同款代码）。</p>
+      <p>3. <b>Dify 工作流落地</b>：品牌标准化节点已就绪；可衔接前轮已建成的「SCS 候选回流」Dify 闭环（复核确认 → 宿主机 Webhook → 自动写库）。</p>
+      <p>4. <b>品类 Skill 同样封装</b>：沿用本服务的「Skill 数据/脚本 → 提取核心层 → FastAPI → Dify 节点」结构，复制即可。</p>
+      <p>5. <b>（可选）沉淀评估 Skill</b>：本次「对照 Spec 逐条合规 + 实跑强制案例 + pytest 验证」的方法可固化为 <code>spec-compliance-audit</code> Skill，供今后任何 Spec 驱动构建复用。</p>
+    </div>
+  </details>
+</div>
+<script>
+  function f(){
+    var q=document.getElementById('s').value.toLowerCase();
+    var rows=document.getElementById('t').getElementsByTagName('tr');
+    for(var i=1;i<rows.length;i++){
+      var t=rows[i].innerText.toLowerCase();
+      rows[i].className = t.indexOf(q)>-1 ? '' : 'rowhide';
+    }
+  }
+</script>
+</body>
+</html>

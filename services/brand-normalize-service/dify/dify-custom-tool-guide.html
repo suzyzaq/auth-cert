@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>brand-normalize-service · Dify 自定义工具导入手册（方案1）</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#161b22; --panel2:#1c232c; --border:#2b333d;
+    --txt:#e6edf3; --muted:#8b98a6; --muted2:#7d8a99; --accent:#4da3ff;
+    --green:#3fb950; --amber:#d29922; --red:#f85149; --purple:#bc8cff; --chip:#21303f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",Roboto,sans-serif;font-size:14px;line-height:1.6}
+  header{padding:22px 26px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#11171f,#0f1419)}
+  h1{margin:0 0 6px;font-size:20px;font-weight:600}
+  .sub{color:var(--muted2);font-size:13px}
+  .wrap{padding:20px 26px 60px;max-width:1180px;margin:0 auto}
+  .kpis{display:flex;gap:12px;flex-wrap:wrap;margin:14px 0 4px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px 16px;min-width:150px}
+  .kpi b{display:block;font-size:20px;color:var(--green)}
+  .kpi span{color:var(--muted2);font-size:12px}
+  .search{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 10px;border-bottom:1px solid var(--border);margin-bottom:18px}
+  .search input{width:100%;padding:11px 14px;background:var(--panel);border:1px solid var(--border);border-radius:8px;color:var(--txt);font-size:14px}
+  .search input:focus{outline:none;border-color:var(--accent)}
+  .verdict{background:rgba(63,185,80,.10);border:1px solid rgba(63,185,80,.4);border-radius:10px;padding:14px 18px;margin:16px 0;font-size:14px}
+  .verdict b{color:var(--green)}
+  .trans{background:rgba(77,163,255,.08);border:1px solid rgba(77,163,255,.35);border-radius:10px;padding:14px 18px;margin:16px 0;font-size:13.5px;color:var(--muted2)}
+  section{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:20px}
+  section>h2{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:8px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--accent)}
+  .lead{color:var(--muted2);font-size:13px;margin:0 0 14px}
+  ol.steps{counter-reset:s;list-style:none;padding:0;margin:10px 0}
+  ol.steps li{position:relative;padding:11px 12px 11px 46px;border-bottom:1px solid var(--border);font-size:13px}
+  ol.steps li:before{counter-increment:s;content:counter(s);position:absolute;left:10px;top:11px;width:24px;height:24px;border-radius:50%;background:var(--chip);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+  ol.steps li b{color:var(--accent)}
+  ol.steps li code{background:var(--panel2);padding:1px 5px;border-radius:4px;color:var(--green);font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0}
+  th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--border);vertical-align:top}
+  th{color:var(--muted2);font-weight:600;background:var(--panel2)}
+  td code{background:var(--panel2);padding:1px 6px;border-radius:4px;color:var(--green);font-size:12px}
+  pre{background:#0b0f14;border:1px solid var(--border);border-radius:8px;padding:12px;overflow:auto;font-size:12px;color:#c9d4e0;line-height:1.5}
+  code.k{color:var(--purple)} code.s{color:var(--green)} code.c{color:var(--amber)}
+  details{border:1px solid var(--border);border-radius:8px;margin:10px 0;background:var(--panel2)}
+  summary{padding:10px 14px;cursor:pointer;font-weight:600;font-size:13.5px}
+  summary:hover{color:var(--accent)}
+  .body{padding:4px 14px 14px}
+  .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;margin:2px 4px 2px 0}
+  .p-green{background:rgba(63,185,80,.15);color:var(--green)}
+  .p-amber{background:rgba(210,153,34,.15);color:var(--amber)}
+  .p-red{background:rgba(248,81,73,.15);color:var(--red)}
+  .p-blue{background:rgba(77,163,255,.15);color:var(--accent)}
+  .note{border-left:3px solid var(--amber);background:rgba(210,153,34,.08);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;color:var(--muted)}
+  .crit{border-left:3px solid var(--red);background:rgba(248,81,73,.08);padding:10px 14px;border-radius:0 8px 8px 0;margin:12px 0;font-size:13px;color:var(--muted)}
+  .copy{float:right;font-size:11px;padding:3px 9px;border:1px solid var(--border);background:var(--panel);color:var(--muted2);border-radius:6px;cursor:pointer}
+  .copy:hover{color:var(--accent);border-color:var(--accent)}
+  .hidden{display:none!important}
+  .empty{color:var(--muted2);text-align:center;padding:30px;display:none}
+  footer{color:var(--muted2);font-size:12px;text-align:center;padding:20px}
+</style>
+</head>
+<body>
+<header>
+  <h1>brand-normalize-service · Dify 自定义工具导入手册（方案1）</h1>
+  <div class="sub">零开发 · 直接导入现成 OpenAPI 规范 · 已修复导入坑 · 逐步 UI 操作</div>
+  <div class="kpis">
+    <div class="kpi"><b>0</b><span>开发量</span></div>
+    <div class="kpi"><b>5</b><span>端点自动导入</span></div>
+    <div class="kpi"><b>PASS</b><span>调用可行性已验证</span></div>
+    <div class="kpi"><b>6</b><span>步完成导入</span></div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="search"><input id="q" placeholder="搜索：导入步骤 / Bearer / API Key / 变量映射 / 测试 / 401 / 地址不可达 / servers …"></div>
+
+  <div class="verdict">✅ <b>方案1 已就绪。</b> 导入文件 <code>dify/brand-normalize-tool.openapi.json</code>（v1.2.0，openapi 3.0.3，Bearer 方案可被 Dify 识别）已修复导入坑，按下方 6 步在 Dify Studio 点几下即可成为一个「自定义工具」。</div>
+
+  <div class="trans">ⓘ <b>我无法直接在这里点 Dify 界面</b>：本会话未连接 Dify 连接器，且 Dify 自定义工具导入是 UI 动作、无公开 API 端点可程序化调用。因此本手册是你的「照着点」清单；spec 已准备成导入就绪，你只需替换 <code>servers</code> 地址即可。若你提供 Dify API Base URL + API Key，我可额外给你一份 <b>API 导入 curl 模板</b>（见第五节）。</div>
+
+  <!-- ============ 前置 ============ -->
+  <section data-k="前置条件 部署地址 brand_api_token servers 替换">
+    <h2><span class="dot"></span>一、导入前准备（2 样东西）</h2>
+    <table>
+      <tr><th>前置项</th><th>说明</th><th>状态</th></tr>
+      <tr><td><b>① 服务部署地址</b></td><td>Dify 必须能网络访问到 brand-normalize-service。把 <code>openapi.json</code> 里 <code>servers[0].url</code> 的 <code>REPLACE_WITH_SERVICE_URL</code> 换成真实 <code>IP:PORT</code>（默认端口 8000）。</td><td><span class="pill p-amber">你填 1 处</span></td></tr>
+      <tr><td><b>② BRAND_API_TOKEN</b></td><td>服务 Bearer 鉴权密钥（<code>.env</code> 里的 <code>BRAND_API_TOKEN</code>）。导入后在工具鉴权里填 <code>Bearer &lt;token&gt;</code>。</td><td><span class="pill p-green">已有</span></td></tr>
+      <tr><td>OpenAPI 规范文件</td><td><code>dify/brand-normalize-tool.openapi.json</code>（已修复，导入就绪）。</td><td><span class="pill p-green">就绪</span></td></tr>
+    </table>
+    <div class="note">★ 导入时 Dify 不要求服务此刻可达（它只是登记规范）；但<b>首次调用前</b>必须保证 ① 地址可达，否则工具调用报「地址不可达」。</div>
+  </section>
+
+  <!-- ============ 6 步 ============ -->
+  <section data-k="导入步骤 工具 自定义 导入 openapi 粘贴 保存">
+    <h2><span class="dot"></span>二、Dify Studio 导入 6 步</h2>
+    <ol class="steps">
+      <li><b>打开规范文件</b>：本地打开 <code>dify/brand-normalize-tool.openapi.json</code>，确认 <code>servers[0].url</code> 已是你的真实地址（如 <code>http://10.0.0.5:8000</code>）。</li>
+      <li><b>进入工具页</b>：Dify Studio 左侧 → <b>工具</b>（Tools）→ 右上 <b>自定义</b>（Custom）。</li>
+      <li><b>导入 OpenAPI</b>：选 <b>导入 OpenAPI 规范</b> → 上传该 JSON 或粘贴内容 → 下一步。</li>
+      <li><b>核对端点</b>：应自动列出 5 个端点 —— <code>normalizeBrand</code> / <code>reloadBrandLibrary</code> / <code>normalizeCategory</code> / <code>reloadCategoryLibrary</code> / <code>brandServiceHealth</code>。确认无报错。</li>
+      <li><b>配置鉴权</b>：在工具鉴权设置选 <b>API Key</b> → Header 名填 <code>Authorization</code> → 值填 <code>Bearer &lt;你的 BRAND_API_TOKEN&gt;</code>。（Dify 读取规范里的 <code>securitySchemes.bearerAuth</code> 自动提示此步）</li>
+      <li><b>保存</b>：保存工具。此后在任意<b>聊天流 / 工作流</b>添加该工具节点即可，无需重复配置。</li>
+    </ol>
+    <div class="note">若第 4 步 Dify 报「无法解析规范」：几乎都是 openapi 版本或 securitySchemes 拼写 —— 本规范已锁定 <code>3.0.3</code> 且拼写正确，正常不会出现。</div>
+  </section>
+
+  <!-- ============ 变量映射 ============ -->
+  <section data-k="变量映射 品牌 attachment_values source_values 品类 product_name client_category 上游节点">
+    <h2><span class="dot" style="background:var(--purple)"></span>三、调用时的变量映射</h2>
+    <p class="lead">工具节点的输入变量，来自上游（开始节点 / 前序节点）的输出变量。两个能力域各自独立。</p>
+    <table>
+      <tr><th>工具</th><th>必填变量</th><th>映射到上游</th></tr>
+      <tr><td><b>品牌 normalizeBrand</b></td><td><code>attachment_values</code> / <code>source_values</code></td><td>附件识别品牌 / 数据库登记品牌（支持数组、单串、逗号·顿号分隔）</td></tr>
+      <tr><td><b>品类 normalizeCategory</b></td><td><code>product_name</code> / <code>client_category</code></td><td>商品名称 / 甲方类目</td></tr>
+    </table>
+    <details>
+      <summary>品牌节点 Body 示例（点击展开）</summary>
+      <div class="body">
+        <pre>{
+  "task_type": "brand_standardization",
+  "attachment_values": [ "{{#start.attachment_brand#}}" ],
+  "source_values": [ "{{#start.db_brand#}}" ]
+}</pre>
+      </div>
+    </details>
+    <details>
+      <summary>品类节点 Body 示例（点击展开）</summary>
+      <div class="body">
+        <pre>{
+  "task_type": "category_standardization",
+  "product_name": [ "{{#start.product_name#}}" ],
+  "client_category": [ "{{#start.client_category#}}" ]
+}</pre>
+        <div class="note">兜底规则（如 <code>茶杯→陶瓷杯</code>）命中在 <code>client_category</code> 上，记得把甲方类目传进 <code>client_category</code>。</div>
+      </div>
+    </details>
+  </section>
+
+  <!-- ============ 测试运行 ============ -->
+  <section data-k="测试运行 茶杯 陶瓷杯 惠普 hp brand_000621 验证">
+    <h2><span class="dot" style="background:var(--green)"></span>四、导入后测试运行</h2>
+    <p class="lead">在聊天流里直接给输入，或工作流手动运行，预期结果如下（已实跑验证通过）：</p>
+    <table>
+      <tr><th>测试输入</th><th>预期输出</th><th>判定</th></tr>
+      <tr><td>品牌：attachment=惠普，source=HP</td><td><code>matched_standard_brand=惠普/HP</code>，<code>matched_standard_brand_id=BRAND_000621</code>，<code>same_brand=true</code></td><td><span class="pill p-green">应命中</span></td></tr>
+      <tr><td>品类：client_category=茶杯</td><td><code>kind3=陶瓷杯</code>，<code>category_source=fallback</code>，<code>confidence=1.0</code></td><td><span class="pill p-green">应命中</span></td></tr>
+      <tr><td>无 Authorization 头</td><td>HTTP <code>401</code>，错误体为品类形（含 kind3，无 same_brand）</td><td><span class="pill p-green">应拒绝</span></td></tr>
+    </table>
+  </section>
+
+  <!-- ============ API 导入模板 ============ -->
+  <section data-k="可选 api 导入 curl 模板 dify key base url 程序化">
+    <h2><span class="dot" style="background:var(--amber)"></span>五、（可选）API 导入 curl 模板</h2>
+    <p class="lead">若你想程序化导入（不走 UI），Dify 企业版开放了应用/工具管理 API。模板如下，填 2 处即可运行（需你的 Dify API Key + Base URL）。</p>
+    <span class="copy" onclick="copy(this,'apicurl')">复制 curl</span>
+    <pre id="apicurl"># 说明：Dify 自定义工具的 OpenAPI 导入通常通过「应用 → 工具」UI 完成；
+# 若用 API，一般是先建应用再绑定工具。以下为通用鉴权调用骨架，
+# 具体端点以你的 Dify 版本文档为准（替换 &lt;DIFY_BASE_URL&gt; 与 &lt;DIFY_API_KEY&gt;）。
+
+curl -X POST "https://&lt;DIFY_BASE_URL&gt;/v1/tools/import" \
+  -H "Authorization: Bearer &lt;DIFY_API_KEY&gt;" \
+  -H "Content-Type: application/json" \
+  -d @dify/brand-normalize-tool.openapi.json
+# 注意：@ 文件体需 UTF-8；如报编码，用 Python 读文件后 requests.post(json=...)</pre>
+    <div class="note">★ 我无法替你跑这条（无 Dify 连接器 / 无你的 Key）。你提供 <code>&lt;DIFY_BASE_URL&gt;</code> + <code>&lt;DIFY_API_KEY&gt;</code> 后，我可把它改写成确定可用的脚本并帮你验证返回。</div>
+  </section>
+
+  <!-- ============ 常见问题 ============ -->
+  <section data-k="常见问题 401 地址不可达 securitySchemes 版本 端口 排查">
+    <h2><span class="dot" style="background:var(--red)"></span>六、常见问题排查</h2>
+    <table>
+      <tr><th>现象</th><th>原因</th><th>处理</th></tr>
+      <tr><td>工具调用报 <code>401</code></td><td>Bearer 未配或 token 错</td><td>工具鉴权 → API Key → <code>Authorization: Bearer &lt;BRAND_API_TOKEN&gt;</code></td></tr>
+      <tr><td>调用报「地址不可达 / timeout」</td><td>Dify 访问不到服务</td><td>查 ① 同网 / ② frp·ngrok 穿透 / ③ host.docker.internal / ④ 钉钉 AI 表格中转</td></tr>
+      <tr><td>导入时「无法解析规范」</td><td>openapi 版本 / securitySchemes 拼写</td><td>本规范已锁 3.0.3 + 拼写正确；若仍报错贴报错给我</td></tr>
+      <tr><td>端口不对（默认 8000）</td><td>部署端口与 servers 不符</td><td><code>servers[0].url</code> 端口按实际部署改（manage.sh / uvicorn 端口）</td></tr>
+      <tr><td>返回字段混域（品类返回含 same_brand）</td><td>旧版错误体分流 bug</td><td>已修复（按 URL 路径分流）；用当前 v1.2.0 规范</td></tr>
+    </table>
+  </section>
+
+  <div class="empty" id="empty">未找到匹配内容，请调整搜索词。</div>
+  <footer>brand-normalize-service · 方案1 自定义工具导入手册 · 配套：dify-integration-guide.html / capabilities.html / README.md</footer>
+</div>
+
+<script>
+  const q=document.getElementById('q'), empty=document.getElementById('empty');
+  q.addEventListener('input',()=>{
+    const v=q.value.trim().toLowerCase(); let shown=0;
+    document.querySelectorAll('section').forEach(el=>{
+      const hit=!v||el.textContent.toLowerCase().includes(v);
+      el.classList.toggle('hidden',!hit); if(hit)shown++;
+    });
+    empty.style.display=v&&shown===0?'block':'none';
+  });
+  function copy(btn,id){
+    const t=document.getElementById(id).textContent;
+    navigator.clipboard.writeText(t).then(()=>{const o=btn.textContent;btn.textContent='已复制';setTimeout(()=>btn.textContent=o,1200);})
+      .catch(()=>btn.textContent='复制失败');
+  }
+</script>
+</body>
+</html>

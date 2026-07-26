@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SCS 候选回流闭环 · Dify × 宿主机 Webhook</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2027; --panel2:#222b34; --line:#2c3742;
+    --txt:#e6edf3; --muted:#8b97a4; --accent:#4ea1ff; --accent2:#36c18d;
+    --warn:#f0a35e; --ok:#36c18d; --bad:#ff6b6b; --chip:#2a333d;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px;line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 60px}
+  h1{font-size:22px;margin:0 0 4px}
+  .sub{color:var(--muted);margin-bottom:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:14px 0}
+  .concl{background:linear-gradient(90deg,#1a2530,#1a2027);border-color:#2b3a47}
+  .concl b{color:var(--accent)}
+  .flow{display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;margin:6px 0 2px}
+  .node{flex:1 1 160px;min-width:150px;background:var(--panel2);border:1px solid var(--line);
+    border-radius:9px;padding:12px;position:relative}
+  .node .n{font-weight:600;color:var(--accent)}
+  .node .d{color:var(--muted);font-size:12.5px;margin-top:4px}
+  .arrow{display:flex;align-items:center;color:var(--accent2);font-size:18px;flex:0 0 18px;justify-content:center}
+  .key{color:var(--accent2);font-weight:600}
+  table{width:100%;border-collapse:collapse;margin-top:6px}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;background:var(--panel2)}
+  td code,code{background:var(--chip);padding:1px 6px;border-radius:4px;font-size:12.5px;color:#cfe3ff}
+  tr.rowhide{display:none}
+  input.search{width:100%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+    border-radius:8px;padding:9px 12px;font-size:14px;margin:8px 0}
+  .btn{background:var(--accent);color:#06121f;border:none;border-radius:6px;padding:5px 10px;
+    font-size:12px;cursor:pointer;font-weight:600}
+  .btn:hover{filter:brightness(1.08)}
+  .copy{float:right}
+  pre{background:#0b0f13;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto;
+    font-size:12.5px;color:#cfe3ff;margin:8px 0 0}
+  details{border:1px solid var(--line);border-radius:8px;padding:0 14px;margin:10px 0;background:var(--panel)}
+  summary{cursor:pointer;padding:11px 0;font-weight:600;color:var(--accent)}
+  .tag{display:inline-block;background:var(--chip);border:1px solid var(--line);border-radius:20px;
+    padding:2px 10px;font-size:12px;color:var(--muted);margin:2px 4px 2px 0}
+  .next{color:var(--accent2)}
+  .ok{color:var(--ok)} .bad{color:var(--bad)} .warn{color:var(--warn)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>SCS 候选回流闭环</h1>
+  <div class="sub">Dify 复核节点 → 宿主机 Webhook → scs_backfill.py → 容器热重载 · 品牌主数据自增长</div>
+
+  <div class="card concl">
+    <b>结论：</b>把 <code>POST /api/brand/normalize</code> 返回的 SCS 候选（<code>scs_candidate</code>）经 Dify 人工复核确认后，
+    由 Dify「请求」节点 POST 到<b>宿主机</b>常驻的 <code>backfill_webhook</code>，自动写回 matcher.db 并热重载，
+    后续请求直接命中本地库、不再每次查 SCS。
+  </div>
+
+  <div class="card">
+    <b>全流程</b>
+    <div class="flow">
+      <div class="node"><div class="n">① Dify 复核</div><div class="d">normalize 返回 scs_candidate → 人工确认是否同品牌 + 指定 standard_brand</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">② Webhook</div><div class="d">宿主机 :8900 常驻，Bearer 鉴权，收确认清单</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">③ backfill</div><div class="d">scs_backfill.py --apply 写宿主机 matcher.db</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="n">④ reload</div><div class="d">调容器 /api/brand/reload 热重载内存索引</div></div>
+    </div>
+    <div style="margin-top:8px"><span class="tag">写库在宿主机（绕开容器 :ro）</span><span class="tag">reload 走容器内端点</span><span class="tag">幂等：已存在自动跳过</span></div>
+  </div>
+
+  <div class="card">
+    <b>Dify 节点设计</b>
+    <input class="search" id="s1" placeholder="搜索节点 / 类型 / 配置…" oninput="f('s1','t1')">
+    <table id="t1">
+      <thead><tr><th>序号</th><th>节点</th><th>类型</th><th>配置要点</th></tr></thead>
+      <tbody>
+        <tr><td>①</td><td>品牌标准化</td><td>HTTP 请求</td><td><code>POST :8000/api/brand/normalize</code> · Header <code>Authorization: Bearer &lt;token&gt;</code> · Body 含 <code>attachment_values</code>/<code>source_values</code></td></tr>
+        <tr><td>②</td><td>是否 SCS 候选</td><td>代码 / IF 分支</td><td>取 <code>needs_manual_review</code> 与 <code>match_type</code>；为候选 → 走人工复核，否则直接出结论</td></tr>
+        <tr><td>③</td><td>人工复核确认</td><td>人工复核 / 表单</td><td>展示 <code>scs_candidates</code>（firm_code/firm_name）；确认是否同品牌 + 填 <code>standard_brand</code></td></tr>
+        <tr><td>④</td><td>拼装确认清单</td><td>代码节点</td><td>转成 <code>[{firm_code,firm_name,standard_brand}]</code>，对齐 scs-confirm.schema.json</td></tr>
+        <tr><td>⑤</td><td>触发回流</td><td>HTTP 请求</td><td><code>POST :8900/backfill</code> · Header <code>Authorization: Bearer &lt;token&gt;</code> · Body = 确认清单</td></tr>
+        <tr><td>⑥</td><td>回流结果</td><td>结束 / 钉钉</td><td>读 <code>applied</code>/<code>skipped</code>/<code>reload_ok</code>；失败则钉钉告警</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <b>字段映射（normalize 输出 → 确认清单）</b>
+    <input class="search" id="s2" placeholder="搜索字段…" oninput="f('s2','t2')">
+    <table id="t2">
+      <thead><tr><th>normalize 响应字段</th><th>确认清单字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><code>attachment_details[].scs_candidates[].scs_firm_code</code></td><td><code>firm_code</code></td><td>SCS 厂商编码，仅追溯</td></tr>
+        <tr><td><code>attachment_details[].scs_candidates[].scs_firm_name</code></td><td><code>firm_name</code></td><td>必填，要回流的品牌名</td></tr>
+        <tr><td>（人工复核指定）</td><td><code>standard_brand</code></td><td>可选；映射到已有标准品牌或新建</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <b>Webhook API（宿主机 :8900）</b>
+    <button class="btn copy" onclick="cp('req')">复制 Body 示例</button>
+    <div style="margin-top:8px;color:var(--muted)">请求 <code>POST /backfill</code> · Bearer 鉴权 · Body：</div>
+    <pre id="req">[
+  {"firm_code": 182805, "firm_name": "洁佳人",   "standard_brand": "洁佳人"},
+  {"firm_code": 7563,   "firm_name": "惠普企业版", "standard_brand": "惠普/HP"}
+]
+// 或包一层： {"items":[...], "dry_run":false, "reload":true}</pre>
+    <button class="btn copy" onclick="cp('resp')">复制 响应示例</button>
+    <div style="margin-top:8px;color:var(--muted)">响应：</div>
+    <pre id="resp">{
+  "ok": true,
+  "applied": 2, "skipped": 0, "dry_run": false,
+  "reload_done": true, "reload_ok": true,
+  "log_file": ".../.scs_backfill_log/backfill-20260726-220626.json",
+  "detail": "[APPLIED] 已写入 2 条，跳过 0 条。"
+}</pre>
+    <button class="btn copy" onclick="cp('start')">复制 启动命令</button>
+    <div style="margin-top:8px;color:var(--muted)">宿主机启动（Dify 云端访问需 --host 0.0.0.0 + 内网穿透）：</div>
+    <pre id="start">cd brand-normalize-service
+python scripts/backfill_webhook.py
+# 或显式
+python scripts/backfill_webhook.py --host 0.0.0.0 --port 8900 \
+  --db C:/Users/Lenovo/.workbuddy/skills/brand-matcher/data/matcher.db \
+  --token &lt;BRAND_API_TOKEN&gt;</pre>
+  </div>
+
+  <details>
+    <summary>约束与边界（必读）</summary>
+    <div style="padding:6px 0 10px">
+      <p><span class="warn">● 写库必须在宿主机</span>：容器内 matcher.db 是 <code>:ro</code> 只读挂载，不能在容器内写。<code>backfill_webhook</code> 跑在宿主机，写的是宿主机真实 matcher.db 路径。</p>
+      <p><span class="warn">● 云端 Dify 无法直连宿主机</span>：须让 Dify 能访问宿主机 <code>:8900</code>。同内网/私有化用内网 IP；云端用内网穿透（frp/ngrok/Cloudflare Tunnel）；同机 Docker 用 <code>host.docker.internal:8900</code>。</p>
+      <p><span class="warn">● 鉴权与安全</span>：webhook 用 <code>Bearer &lt;BRAND_API_TOKEN&gt;</code>（与 normalize 同一 Token）。默认仅监听 <code>127.0.0.1</code>；暴露公网时务必在穿透层加来源限制/二次鉴权。</p>
+      <p><span class="ok">● 幂等</span>：已存在的 <code>firm_name</code>（brands 或 brand_alias）自动跳过，重复触发安全。</p>
+      <p><span class="ok">● 留痕</span>：每次调用落盘 <code>.scs_backfill_log/backfill-&lt;ts&gt;.json</code>（入参+结果），便于追溯。</p>
+      <p><span class="key">● 备选触发</span>：若不想暴露宿主机端口，可走钉钉 AI 表格中转——Dify 写「SCS回流待处理」表，宿主机 WorkBuddy 定时轮询 → backfill → 回写状态（本机可达性无忧，适合长期生产）。</p>
+    </div>
+  </details>
+
+  <details open>
+    <summary>下一步建议</summary>
+    <div style="padding:6px 0 10px" class="next">
+      <p>1. <b>穿透/可达性</b>：确定 Dify 部署形态，配好 :8900 的访问方式（同网 IP / 穿透 / host.docker.internal）。</p>
+      <p>2. <b>Dify 工作流落地</b>：按上表 6 节点搭建，④代码节点对齐 <code>scs-confirm.schema.json</code>，先 <code>dry_run:true</code> 验证链路再放开写库。</p>
+      <p>3. <b>钉钉中转备选</b>：若走中转台路线，设计「SCS回流待处理」表字段（firm_code/firm_name/standard_brand/审核单号/status/回流结果）。</p>
+      <p>4. <b>回流案例沉淀</b>：确认清单可反向沉淀为「SCS候选→确认」案例库，校验 brand-recognition 召回质量。</p>
+      <p>5. <b>监控</b>：webhook 返回 <code>reload_ok:false</code> 或 <code>applied:0</code> 时接入钉钉告警。</p>
+    </div>
+  </details>
+</div>
+<script>
+  function f(sid,tid){
+    var q=document.getElementById(sid).value.toLowerCase();
+    var rows=document.getElementById(tid).getElementsByTagName('tr');
+    for(var i=1;i<rows.length;i++){
+      var t=rows[i].innerText.toLowerCase();
+      rows[i].className = t.indexOf(q)>-1 ? '' : 'rowhide';
+    }
+  }
+  function cp(id){
+    var t=document.getElementById(id).innerText;
+    navigator.clipboard.writeText(t).then(function(){
+      event.target.innerText='已复制 ✓';
+      setTimeout(function(){event.target.innerText='复制 '+(id==='req'?'Body 示例':id==='resp'?'响应示例':'启动命令');},1200);
+    });
+  }
+</script>
+</body>
+</html>

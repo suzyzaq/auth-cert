@@ -1,0 +1,99 @@
+version: 1
+description: 从旧版 scripts/final_match.py special_kind3() 迁移的品类兜底规则
+rules:
+  - {id: care-heat-therapy, enabled: true, priority: 980, sources: {client_category: [健康护理电器], product_name: [热敷, 发热披肩, 肩颈]}, source_mode: all, target: {kind3: 理疗仪}, note: 热敷肩颈类挂靠理疗仪}
+  - {id: copier-generic, enabled: true, priority: 970, sources: {client_category: [复合机]}, target: {kind3: 复合机配件}}
+  - {id: ribbon-frame-compatible, enabled: true, priority: 970, sources: {client_category: [色带], product_name: [色带架, 内含芯]}, source_mode: all, target: {kind3: 兼容色带架}}
+  - {id: ink-cartridge-compatible, enabled: true, priority: 970, sources: {client_category: [墨盒]}, target: {kind3: 兼容墨盒}}
+  - {id: induction-cooker-generic, enabled: true, priority: 970, sources: {client_category: [电磁炉/电陶炉]}, target: {kind3: 电磁炉}}
+  - {id: tea-cup, enabled: true, priority: 900, sources: {client_category: [茶杯]}, target: {kind3: 陶瓷杯}, note: 茶杯挂靠陶瓷杯}
+  - {id: puer-tea, enabled: true, priority: 900, sources: {client_category: [普洱]}, target: {kind3: 茶类/茶饮料}}
+  - {id: white-tea, enabled: true, priority: 900, sources: {client_category: [白茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: black-tea, enabled: true, priority: 900, sources: {client_category: [红茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: green-tea, enabled: true, priority: 900, sources: {client_category: [绿茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: herbal-tea, enabled: true, priority: 900, sources: {client_category: [代用茶/花草茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: fruit-tea, enabled: true, priority: 900, sources: {client_category: [花果/水果茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: noodles, enabled: true, priority: 900, sources: {client_category: [挂面]}, target: {kind3: 面条}}
+  - {id: foot-bath, enabled: true, priority: 900, sources: {client_category: [足浴足疗器]}, target: {kind3: 足浴盆}}
+  - {id: electric-kettle, enabled: true, priority: 900, sources: {client_category: [电热水壶]}, target: {kind3: 电水壶}}
+  - {id: smart-scale, enabled: true, priority: 900, sources: {client_category: [智能秤]}, target: {kind3: 电子秤}}
+  - {id: mixed-beans, enabled: true, priority: 900, sources: {client_category: [杂豆类]}, target: {kind3: 杂粮}}
+  - {id: coffee-sugar, enabled: true, priority: 900, sources: {client_category: [糖]}, target: {kind3: 咖啡豆/粉/伴侣/糖}}
+  - {id: candy, enabled: true, priority: 900, sources: {client_category: [糖果]}, target: {kind3: 糖果/巧克力}}
+  - {id: pastries, enabled: true, priority: 900, sources: {client_category: [其他糕点点心]}, target: {kind3: 饼干/糕点}}
+  - {id: cookware-bakeware, enabled: true, priority: 900, sources: {client_category: [烘焙用具]}, target: {kind3: 厨具}, note: 烘焙用具挂靠厨具}
+  - {id: milk, enabled: true, priority: 900, sources: {client_category: [牛奶]}, target: {kind3: 乳制品饮料}}
+  - {id: dried-goods, enabled: true, priority: 900, sources: {client_category: [其他干货]}, target: {kind3: 休闲零食}}
+  - {id: kitchen-rack, enabled: true, priority: 900, sources: {client_category: [厨房置物架]}, target: {kind3: 收纳架}}
+  - {id: tea-dispenser, enabled: true, priority: 900, sources: {client_category: [茶饮机]}, target: {kind3: 饮水机}}
+  - {id: cereal-drink, enabled: true, priority: 900, sources: {client_category: [冲调谷物]}, target: {kind3: 杂粮}}
+  - {id: cooking-sauce, enabled: true, priority: 900, sources: {client_category: [烹饪酱]}, target: {kind3: 调料/调味品}}
+  - {id: wok, enabled: true, priority: 900, sources: {client_category: [炒锅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: bulk-nuts, enabled: true, priority: 900, sources: {client_category: [大规格坚果]}, target: {kind3: 休闲零食}}
+  - {id: tea-boiler, enabled: true, priority: 900, sources: {client_category: [煮茶器/电茶盘]}, target: {kind3: 养生壶/煎药壶}}
+  - {id: soup-pot, enabled: true, priority: 900, sources: {client_category: [汤锅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: multi-knife, enabled: true, priority: 900, sources: {client_category: [多功能刀]}, target: {kind3: 刀具}}
+  - {id: wellness-tea, enabled: true, priority: 900, sources: {client_category: [养生茶/配方茶/调味茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: instant-drink, enabled: true, priority: 900, sources: {client_category: [冲调饮品]}, target: {kind3: 茶类/茶饮料}}
+  - {id: frying-pan, enabled: true, priority: 900, sources: {client_category: [平底锅/煎锅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: kitchen-tools, enabled: true, priority: 900, sources: {client_category: [厨房小工具]}, target: {kind3: 厨具}}
+  - {id: multifunction-pot, enabled: true, priority: 900, sources: {client_category: [多功能锅]}, target: {kind3: 多用途锅}}
+  - {id: chopping-board, enabled: true, priority: 900, sources: {client_category: [菜板/砧板]}, target: {kind3: 厨具}}
+  - {id: chenpi-tea, enabled: true, priority: 900, sources: {client_category: [陈皮/柑普茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: adult-milk-powder, enabled: true, priority: 900, sources: {client_category: [成人奶粉]}, target: {kind3: 乳制品饮料}}
+  - {id: meeting-panel, enabled: true, priority: 900, sources: {client_category: [会议平板一体机]}, target: {kind3: 智能会议平板}}
+  - {id: other-cups, enabled: true, priority: 900, sources: {client_category: [其他材质杯具]}, target: {kind3: 塑料水杯}}
+  - {id: coffee-cup, enabled: true, priority: 900, sources: {client_category: [咖啡杯]}, target: {kind3: 陶瓷杯}}
+  - {id: comb, enabled: true, priority: 900, sources: {client_category: [梳子]}, target: {kind3: 发梳}}
+  - {id: breakfast-maker, enabled: true, priority: 900, sources: {client_category: [三明治机/早餐机]}, target: {kind3: 面包机}}
+  - {id: olive-oil, enabled: true, priority: 900, sources: {client_category: [橄榄油]}, target: {kind3: 食用油}}
+  - {id: pressure-cooker, enabled: true, priority: 900, sources: {client_category: [高压锅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: milk-pot, enabled: true, priority: 900, sources: {client_category: [奶锅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: kitchen-knife, enabled: true, priority: 900, sources: {client_category: [菜刀]}, target: {kind3: 刀具}}
+  - {id: seafood-dried, enabled: true, priority: 900, sources: {client_category: [鱼虾贝类干货]}, target: {kind3: 休闲零食}}
+  - {id: electric-cooker, enabled: true, priority: 900, sources: {client_category: [电煮锅]}, target: {kind3: 多用途锅}}
+  - {id: other-oil, enabled: true, priority: 900, sources: {client_category: [其他油]}, target: {kind3: 食用油}}
+  - {id: other-tea, enabled: true, priority: 900, sources: {client_category: [其他茗茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: oolong-tea, enabled: true, priority: 900, sources: {client_category: [乌龙茶]}, target: {kind3: 茶类/茶饮料}}
+  - {id: cup-set, enabled: true, priority: 900, sources: {client_category: [杯具套装]}, target: {kind3: 茶具}}
+  - {id: dried-fruit, enabled: true, priority: 900, sources: {client_category: [水果干]}, target: {kind3: 休闲零食}}
+  - {id: specialty-drink, enabled: true, priority: 900, sources: {client_category: [特色饮料]}, target: {kind3: 茶类/茶饮料}}
+  - {id: cookware-set, enabled: true, priority: 900, sources: {client_category: [锅具套装]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: thermos, enabled: true, priority: 900, sources: {client_category: [保温壶]}, target: {kind3: 保温杯/壶}}
+  - {id: enamel-pot, enabled: true, priority: 900, sources: {client_category: [珐琅锅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: lunch-box, enabled: true, priority: 900, sources: {client_category: [饭盒/保温盒]}, target: {kind3: 电热饭盒}}
+  - {id: bowls, enabled: true, priority: 900, sources: {client_category: [碗/盅]}, target: {kind3: 锅碗瓢盆及配件}}
+  - {id: teapot, enabled: true, priority: 900, sources: {client_category: [茶壶]}, target: {kind3: 茶具}}
+  - {id: color-paper, enabled: true, priority: 900, sources: {client_category: [其他纸类]}, target: {kind3: 彩色复印纸}}
+  - {id: sticky-notes, enabled: true, priority: 900, sources: {client_category: [便签本/便条纸/N次贴]}, target: {kind3: 便条本/盒}}
+  - {id: toner, enabled: true, priority: 900, sources: {client_category: [墨粉]}, target: {kind3: 原装打印机粉盒}}
+  - {id: label-printer, enabled: true, priority: 900, sources: {client_category: [其他打印设备]}, target: {kind3: 标签打印机}}
+  - {id: pens, enabled: true, priority: 900, sources: {client_category: [笔类]}, target: {kind3: 钢笔}}
+  - {id: peripheral-cable, enabled: true, priority: 900, sources: {client_category: [其他外设配件]}, target: {kind3: 连接线/转换线/数据线}}
+  - {id: office-phone, enabled: true, priority: 900, sources: {client_category: [办公电话]}, target: {kind3: 录音电话及配件}}
+
+  - {id: rice-grain-rice, enabled: true, priority: 850, sources: {client_category: [谷米类, 复合粥米, 稻花香米], product_name: [糙米, 大米, 米, 稻]}, match_mode: {client_category: exact, product_name: contains_short}, source_mode: all, target: {kind3: 大米}}
+  - {id: rice-grain-mixed, enabled: true, priority: 840, sources: {client_category: [谷米类, 复合粥米, 稻花香米]}, target: {kind3: 杂粮}}
+  - {id: socket-strip, enabled: true, priority: 850, sources: {client_category: [插座/转换器], product_name: [插座, 插排, 接线板]}, source_mode: all, target: {kind3: 插头插座}}
+  - {id: socket-converter, enabled: true, priority: 840, sources: {client_category: [插座/转换器]}, target: {kind3: 转换器}}
+  - {id: care-massager, enabled: true, priority: 850, sources: {client_category: [健康护理电器], product_name: [按摩, 刮痧]}, source_mode: all, target: {kind3: 按摩器}}
+  - {id: care-oximeter, enabled: true, priority: 850, sources: {client_category: [健康护理电器], product_name: [血氧, 脉氧]}, source_mode: all, target: {kind3: 血氧仪}}
+  - {id: care-therapy, enabled: true, priority: 850, sources: {client_category: [健康护理电器], product_name: [理疗]}, source_mode: all, target: {kind3: 理疗仪}}
+  - {id: care-nebulizer, enabled: true, priority: 850, sources: {client_category: [健康护理电器], product_name: [雾化]}, source_mode: all, target: {kind3: 雾化器}}
+  - {id: care-beauty, enabled: true, priority: 850, sources: {client_category: [健康护理电器], product_name: [洁面, 美容]}, source_mode: all, target: {kind3: 美容器/洁面仪}}
+  - {id: digital-charger, enabled: true, priority: 850, sources: {client_category: [其他数码配件], product_name: [无线充电器, 快充底座, 充电器]}, source_mode: all, target: {kind3: 充电器}}
+  - {id: digital-power-bank, enabled: true, priority: 850, sources: {client_category: [其他数码配件], product_name: [充电宝, 移动电源]}, source_mode: all, target: {kind3: 移动电源}}
+  - {id: digital-cable, enabled: true, priority: 850, sources: {client_category: [其他数码配件], product_name: [数据线, 充电线, TYPE-C, TYPEC]}, source_mode: all, target: {kind3: 连接线/转换线/数据线}}
+  - {id: lifestyle-fitness, enabled: true, priority: 850, sources: {client_category: [潮流生活电器], product_name: [甄脂, 律动, 健身器材, 抖抖机]}, source_mode: all, target: {kind3: 多功能健身器械}}
+  - {id: network-crystal-head, enabled: true, priority: 850, sources: {client_category: [网络配件], product_name: [水晶头]}, source_mode: all, target: {kind3: 水晶头}}
+  - {id: network-cable, enabled: true, priority: 840, sources: {client_category: [网络配件]}, target: {kind3: 网线}}
+  - {id: smart-photo-frame, enabled: true, priority: 850, sources: {client_category: [其他智能设备], product_name: [数码相框]}, source_mode: all, target: {kind3: 数码相框}}
+  - {id: smart-drone, enabled: true, priority: 850, sources: {client_category: [其他智能设备], product_name: [无人机]}, source_mode: all, target: {kind3: 无人机反制}}
+  - {id: smart-doorbell, enabled: true, priority: 850, sources: {client_category: [其他智能设备], product_name: [门铃]}, source_mode: all, target: {kind3: 门铃}}
+  - {id: smart-peephole, enabled: true, priority: 850, sources: {client_category: [其他智能设备], product_name: [猫眼]}, source_mode: all, target: {kind3: 反猫眼观察镜}}
+  - {id: care-lint-remover, enabled: true, priority: 850, sources: {client_category: [健康护理电器], product_name: [毛球]}, source_mode: all, target: {kind3: 毛球修剪器}}
+  - {id: office-cable-stand, enabled: true, priority: 850, sources: {client_category: [办公线缆], product_name: [支架]}, source_mode: all, target: {kind3: 手机支架}}
+  - {id: office-cable-data, enabled: true, priority: 840, sources: {client_category: [办公线缆]}, target: {kind3: 连接线/转换线/数据线}}
+  - {id: commercial-sterilizer, enabled: true, priority: 850, sources: {client_category: [商用厨电], product_name: [消毒]}, source_mode: all, target: {kind3: 消毒机}}
+  - {id: computer-cable-manager, enabled: true, priority: 850, sources: {client_category: [其他电脑配件], product_name: [理线]}, source_mode: all, target: {kind3: 理线器}}
+  - {id: computer-mainboard, enabled: true, priority: 840, sources: {client_category: [其他电脑配件]}, target: {kind3: 电脑主板}}

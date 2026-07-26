@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>钉钉 AI 表格中转方案 · brand-normalize-service</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2937; --sub:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --ok:#059669; --warn:#d97706; --err:#dc2626;
+    --code-bg:#0f172a; --code-ink:#e2e8f0; --chip:#eef2ff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.6;font-size:14px}
+  .wrap{max-width:1080px;margin:0 auto;padding:24px 20px 60px}
+  header{border-bottom:2px solid var(--brand);padding-bottom:14px;margin-bottom:22px}
+  h1{font-size:22px;margin:0 0 6px}
+  h2{font-size:17px;margin:26px 0 10px;padding-left:10px;border-left:4px solid var(--brand)}
+  h3{font-size:14px;margin:16px 0 8px;color:var(--sub)}
+  .sub{color:var(--sub);font-size:13px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px;margin:12px 0;
+    box-shadow:0 1px 2px rgba(16,24,40,.04)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  .kpi .n{font-size:22px;font-weight:700;color:var(--brand)}
+  .kpi .l{font-size:12px;color:var(--sub)}
+  pre{background:var(--code-bg);color:var(--code-ink);padding:14px 16px;border-radius:8px;
+    overflow:auto;font-size:12.5px;line-height:1.5;margin:8px 0}
+  code{font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+  .inline code{background:var(--chip);color:#3730a3;padding:1px 6px;border-radius:4px;font-size:12.5px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{border:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+  th{background:#f0f4f8;font-weight:600}
+  tr:nth-child(even) td{background:#fafbfc}
+  .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600}
+  .p-ok{background:#dcfce7;color:var(--ok)} .p-warn{background:#fef3c7;color:var(--warn)}
+  .p-err{background:#fee2e2;color:var(--err)} .p-b{background:var(--chip);color:#3730a3}
+  .search{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;margin:6px 0 2px}
+  details{border:1px solid var(--line);border-radius:8px;padding:0 14px;margin:8px 0;background:var(--card)}
+  summary{cursor:pointer;padding:10px 0;font-weight:600}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;margin:6px 0}
+  .box{border:1px solid var(--line);border-radius:8px;padding:8px 12px;background:#f8fafc}
+  .arrow{color:var(--sub);font-weight:700}
+  .note{border-left:4px solid var(--warn);background:#fffbeb;padding:10px 14px;border-radius:0 8px 8px 0;margin:10px 0;font-size:13px}
+  .ok{border-left:4px solid var(--ok);background:#f0fdf4}
+  .copy{float:right;font-size:12px;color:var(--brand);cursor:pointer;border:1px solid var(--line);
+    border-radius:6px;padding:2px 10px;background:#fff;user-select:none}
+  .copy:active{background:#eff6ff}
+  .foot{color:var(--sub);font-size:12px;margin-top:30px;border-top:1px solid var(--line);padding-top:14px}
+  .hid{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>钉钉 AI 表格中转方案</h1>
+  <div class="sub">让 <b>云端 Dify（dify.ai）</b> 无需公网/隧道即可调用本机 <b>brand-normalize-service</b>（localhost:8000）。
+  钉钉 AI 表格作为「云端可达的共享中转台」，把任务提交与结果回收解耦。本方案已端到端跑通验证。</div>
+</header>
+
+<div class="grid">
+  <div class="kpi"><div class="n">2</div><div class="l">任务类型：品牌 / 品类</div></div>
+  <div class="kpi"><div class="n">8</div><div class="l">中转表字段</div></div>
+  <div class="kpi"><div class="n">3</div><div class="l">已验证记录（含 HTTP 写入）</div></div>
+  <div class="kpi"><div class="n">0</div><div class="l">公网端口 / 隧道依赖</div></div>
+</div>
+
+<div class="card ok">
+  <b>核心结论：</b> 云端 Dify 只负责往钉钉中转表写 <span class="pill p-b">pending</span> 行；
+  本机常驻的 <code>dingtalk_relay.py</code> 轮询该表 → 调本机服务 → 把结果写回 <code>result</code> 列并置 <span class="pill p-ok">done</span>。
+  Dify 轮询读取结果即可。全程本机服务不出网，最稳。
+</div>
+
+<h2>① 闭环架构</h2>
+<div class="card">
+  <div class="flow">
+    <div class="box">云端 Dify<br><span class="sub">写 pending 行</span></div>
+    <span class="arrow">──▶</span>
+    <div class="box" style="border-color:var(--brand)">钉钉 AI 表格<br><span class="sub">欧菲斯·品牌标准化中转台</span></div>
+    <span class="arrow">◀──</span>
+    <div class="box">本机 dingtalk_relay.py<br><span class="sub">轮询（每 15s）</span></div>
+    <span class="arrow">──▶</span>
+    <div class="box">localhost:8000<br><span class="sub">/api/brand·category/normalize</span></div>
+    <span class="arrow">──▶</span>
+    <div class="box" style="border-color:var(--ok)">写回 result+done</div>
+  </div>
+  <div class="note">Dify 读取结果：再发一次 JSON-RPC <code>query_records</code> 检查该行 <code>status==done</code>，取 <code>result</code> 列（标准化 JSON）。详见 ④。</div>
+</div>
+
+<h2>② 中转表 Schema</h2>
+<div class="sub">Base：<code>YQBnd5ExVEwOpmXnIggdl7kG8yeZqMmz</code> ｜ Table：<code>hERWDMS</code>（已建好，可直接用）。字段 ID 已固定：</div>
+<input class="search" id="fsearch" placeholder="搜索字段名 / ID / 含义…" oninput="filterRows()">
+<table id="ftable">
+  <thead><tr><th>字段名</th><th>fieldId</th><th>类型</th><th>含义</th><th>写入方</th><th>读取方</th></tr></thead>
+  <tbody>
+    <tr><td><b>task_type</b></td><td><code>C9VE0UU</code></td><td>singleSelect</td><td>任务类型：brand / category</td><td>生产者</td><td>中继</td></tr>
+    <tr><td><b>status</b></td><td><code>5MNxSsU</code></td><td>singleSelect</td><td>pending / processing / done / error</td><td>生产者= pending；中继=其余</td><td>生产者 / Dify</td></tr>
+    <tr><td><b>in_attachment_values</b></td><td><code>vtewR4g</code></td><td>text</td><td>品牌任务：attachment_values</td><td>生产者</td><td>中继</td></tr>
+    <tr><td><b>in_source_values</b></td><td><code>KnJTVAn</code></td><td>text</td><td>品牌任务：source_values</td><td>生产者</td><td>中继</td></tr>
+    <tr><td><b>in_product_name</b></td><td><code>ASaPpI3</code></td><td>text</td><td>品类任务：product_name</td><td>生产者</td><td>中继</td></tr>
+    <tr><td><b>in_client_category</b></td><td><code>mEza2hi</code></td><td>text</td><td>品类任务：client_category</td><td>生产者</td><td>中继</td></tr>
+    <tr><td><b>result</b></td><td><code>WxgsdDw</code></td><td>text</td><td>标准化结果（完整 JSON）</td><td>中继</td><td>生产者 / Dify</td></tr>
+    <tr><td><b>error_msg</b></td><td><code>w2HCIiH</code></td><td>text</td><td>异常信息（失败行）</td><td>中继</td><td>生产者</td></tr>
+  </tbody>
+</table>
+<div class="note">单选出参格式必须写 <code>{"name":"pending"}</code>（不是 <code>{"text":...}</code>，否则报 <code>INVALID_SELECT_WRITE_FORMAT</code>）。</div>
+
+<h2>③ 宿主机中继代理（已验证）</h2>
+<div class="card">
+  <h3>依赖与配置</h3>
+  <ul>
+    <li>本机已运行服务：<code>uvicorn app.main:app --host 0.0.0.0 --port 8000</code></li>
+    <li><code>mcporter</code>（脚本自动定位；Windows 用 <code>mcporter.cmd</code> 包装，已处理）</li>
+    <li><code>.env</code> 需含两项：<code>BRAND_API_TOKEN=…</code> 与 <code>DINGTALK_MCP_URL="https://mcp-gw.dingtalk.com/server/…?key=…"</code></li>
+  </ul>
+  <h3>运行</h3>
+  <pre id="c1">cd brand-normalize-service
+
+# 常驻轮询（默认每 15s 一轮）
+python scripts/dingtalk_relay.py
+
+# 单次跑完 pending 即退出（验证用）
+python scripts/dingtalk_relay.py --once
+
+# 可选参数
+# --poll-secs 10   轮询间隔秒
+# --service-url http://127.0.0.1:8000
+# --base-id / --table-id   覆盖中转表
+# --mcporter / --mcp-url / --token   显式覆盖</pre>
+  <span class="copy" onclick="copy('c1')">复制</span>
+  <h3>行为要点</h3>
+  <ul>
+    <li>只处理 <code>status==pending</code> 的行；处理前先置 <code>processing</code> 防重入/重复处理。</li>
+    <li>按 <code>task_type</code> 分派到 <code>/api/brand/normalize</code> 或 <code>/api/category/normalize</code>（Bearer 鉴权复用 <code>BRAND_API_TOKEN</code>）。</li>
+    <li>成功：写 <code>result</code>（完整响应 JSON）+ 置 <code>done</code>。</li>
+    <li>本机服务瞬态不可达（连接失败）：保留 <code>pending</code> 下一轮重试，仅记日志，不写 error（避免丢任务）。</li>
+    <li>真错误（4xx/业务失败）：置 <code>error</code> + 写 <code>error_msg</code>。</li>
+    <li>日志落盘 <code>.relay_log/</code> 便于追溯。</li>
+  </ul>
+</div>
+
+<h2>④ 云端 Dify 接入（无需公网）</h2>
+<div class="card ok">
+  <b>推荐做法：Dify HTTP 请求节点直接 POST 钉钉 MCP 的 Streamable HTTP 地址</b>（即 <code>DINGTALK_MCP_URL</code> 那个公网 URL）。
+  经实测，该端点无需 session 握手，直接发 JSON-RPC <code>tools/call</code> 即可读写。无需另建钉钉应用。
+</div>
+
+<details open>
+  <summary>4.1 提交任务（写 pending 行）</summary>
+  <pre id="c2">POST {{DINGTALK_MCP_URL}}
+Headers:
+  Content-Type: application/json
+  Accept: application/json, text/event-stream
+
+Body (品牌任务示例):
+{
+  "jsonrpc":"2.0","id":1,"method":"tools/call",
+  "params":{
+    "name":"create_records",
+    "arguments":{
+      "baseId":"YQBnd5ExVEwOpmXnIggdl7kG8yeZqMmz",
+      "tableId":"hERWDMS",
+      "records":[{"cells":{
+        "task_type":{"name":"brand"},
+        "status":{"name":"pending"},
+        "in_attachment_values":"{{brand_raw}}"
+      }}]
+    }
+  }
+}
+
+# 品类任务把 cells 换成：
+#   "task_type":{"name":"category"},
+#   "status":{"name":"pending"},
+#   "in_product_name":"{{product_name}}",
+#   "in_client_category":"{{client_category}}"</pre>
+  <span class="copy" onclick="copy('c2')">复制</span>
+</details>
+
+<details>
+  <summary>4.2 读取结果（轮询 done）</summary>
+  <pre id="c3">POST {{DINGTALK_MCP_URL}}
+Headers: Content-Type: application/json
+Body:
+{
+  "jsonrpc":"2.0","id":2,"method":"tools/call",
+  "params":{"name":"query_records","arguments":{
+    "baseId":"YQBnd5ExVEwOpmXnIggdl7kG8yeZqMmz",
+    "tableId":"hERWDMS","limit":10
+  }}
+}
+# 解析 data.records[]：
+#   cells["5MNxSsU"].name == "done"  → 该行完成
+#   cells["WxgsdDw"]              → 结果 JSON 字符串（再 json.loads）
+# 建议：提交后循环轮询，直到目标行 status==done</pre>
+  <span class="copy" onclick="copy('c3')">复制</span>
+</details>
+
+<div class="note"><b>备选（标准但需建应用）：</b>在钉钉开放平台建一个企业内部应用，拿 appKey/appSecret 换 access_token，再调 AI 表格开放 API 写记录。
+优点是有官方文档与限额保障；缺点是多一步应用配置。本方案默认用 4.1/4.2 的 MCP-JSON-RPC 直连，零额外配置。</div>
+
+<h2>⑤ 已验证结果（真实跑通）</h2>
+<table>
+  <thead><tr><th>recordId</th><th>task_type</th><th>输入</th><th>status</th><th>输出</th></tr></thead>
+  <tbody>
+    <tr><td><code>5oATGJeSxf</code></td><td>brand</td><td>惠普 HP</td><td><span class="pill p-ok">done</span></td><td>惠普/HP · en_cn · same_brand=True</td></tr>
+    <tr><td><code>HPTGwC6aib</code></td><td>category</td><td>茶杯</td><td><span class="pill p-ok">done</span></td><td>生活家居 / 餐饮周边 / 陶瓷杯 · conf 1.0</td></tr>
+    <tr><td><code>Rf88PvPeWg</code></td><td>brand</td><td>测试HTTP写入</td><td><span class="pill p-ok">done</span></td><td>经 Dify 同款 JSON-RPC 写入 → 中继处理 → 回写（链路全通）</td></tr>
+  </tbody>
+</table>
+
+<h2>⑥ 故障排查</h2>
+<table>
+  <thead><tr><th>现象</th><th>原因 / 处理</th></tr></thead>
+  <tbody>
+    <tr><td><code>WinError 193 不是有效的 Win32 应用程序</code></td><td>直接 exec 了裸 <code>mcporter</code>（sh 脚本）。脚本已自动改用 <code>mcporter.cmd</code>，无需手动处理。</td></tr>
+    <tr><td><code>INVALID_SELECT_WRITE_FORMAT</code></td><td>单选出参写成 <code>{"text":"x"}</code>。改为 <code>{"name":"x"}</code>。</td></tr>
+    <tr><td>行一直 pending 不处理</td><td>本机服务未启动 / 端口不对 → 中继保留 pending 重试；先确认 <code>/health</code> 正常。</td></tr>
+    <tr><td><code>token is illegal</code>（写表报错）</td><td><code>DINGTALK_MCP_URL</code> 被截断或重复拼接了 <code>?key=</code>。该 URL 只应出现一次 <code>?key=</code>。</td></tr>
+    <tr><td>Dify HTTP 节点收不到工具结果</td><td>确认 Body 是 JSON-RPC 信封（含 <code>method/tools/call</code> 与 <code>params.name/arguments</code>），Accept 含 <code>text/event-stream</code>。</td></tr>
+  </tbody>
+</table>
+
+<h2>⑦ 下一步</h2>
+<ul>
+  <li><b>常驻部署：</b>把 <code>uvicorn</code> 与 <code>dingtalk_relay.py</code> 都做成开机/守护进程（计划任务或 supervisor），保证本机开机即服务。</li>
+  <li><b>Dify 工作流封装：</b>把 4.1/4.2 做成 Dify 自定义工具或子流程，对外暴露「品牌标准化」「品类标准化」两个节点。</li>
+  <li><b>限流与批量：</b>中转表可承载批量任务；中继已支持 <code>--batch</code> 与分页，大批量时调大即可。</li>
+  <li><b>可观测：</b><code>.relay_log/</code> 已留痕；后续可加钉钉机器人告警（error 行数阈值）。</li>
+  <li><b>多表扩展：</b>如要区分环境/业务，复制该表结构（字段 ID 会变），用 <code>--base-id/--table-id</code> 隔离即可。</li>
+</ul>
+
+<div class="foot">
+  本页为单文件交互式指南，无外部依赖，可本地打开或嵌入内网知识库。
+  关联文件：<code>scripts/dingtalk_relay.py</code> ｜ <code>dify/brand-normalize-tool.openapi.json</code> ｜ 知识库 <code>01_PROJECTS/欧菲斯/brand-normalize-service/README.md</code>。
+</div>
+</div>
+
+<script>
+function filterRows(){
+  var q=document.getElementById('fsearch').value.trim().toLowerCase();
+  var rows=document.querySelectorAll('#ftable tbody tr');
+  rows.forEach(function(r){
+    var t=r.textContent.toLowerCase();
+    r.classList.toggle('hid', q && t.indexOf(q)<0);
+  });
+}
+function copy(id){
+  var el=document.getElementById(id);
+  var txt=el.innerText;
+  navigator.clipboard ? navigator.clipboard.writeText(txt).then(function(){flash(id)},function(){fallback(txt)})
+    : fallback(txt);
+}
+function fallback(txt){
+  var ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);
+  ta.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(ta);
+}
+function flash(id){
+  var b=document.querySelector('[onclick="copy(\''+id+'\')"]');
+  if(!b)return;var o=b.textContent;b.textContent='已复制';setTimeout(function(){b.textContent=o},1200);
+}
+</script>
+</body>
+</html>
